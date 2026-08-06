@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaundryMatic — Login</title>
+    <link rel="stylesheet" href="style.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+</head>
+
+<body class="auth-body">
+
+    <div class="auth-wrapper">
+
+        <!-- Left panel: branding-->
+        <div class="auth-brand">
+            <div class="auth-brand-logo">
+                <div class="logo-icon" style="width:48px;height:48px;font-size:22px">🧺</div>
+            </div>
+            <div class="auth-brand-name">LaundryMatic</div>
+            <div class="auth-brand-tag">IoT Smart Weighing System</div>
+            <div class="auth-brand-desc">
+                Automate your laundry operations with real-time weight monitoring,
+                accurate billing, and digital record keeping.
+            </div>
+            <div class="auth-brand-dots">
+                <span class="dot-active"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+            </div>
+        </div>
+
+        <!-- Right panel: the form -->
+        <div class="auth-card">
+
+            <div class="auth-card-header">
+                <div class="auth-card-title">Welcome Back</div>
+                <div class="auth-card-subtitle">Sign in to your LaundryMatic account</div>
+            </div>
+
+            <!-- Error message box — hidden until JS shows it -->
+            <div class="auth-error" id="login-error">
+                <span>⚠</span>
+                <span id="login-error-msg">Invalid username or password.</span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <input type="text" class="form-input" id="login-username" placeholder="Enter your username"
+                    autocomplete="username">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <div class="input-with-icon">
+                    <input type="password" class="form-input" id="login-password" placeholder="Enter your password"
+                        autocomplete="current-password">
+                    <!-- Eye icon toggles password visibility -->
+                    <button class="input-icon-btn" onclick="togglePassword('login-password', this)">👁</button>
+                </div>
+            </div>
+
+            <div class="auth-row">
+                <label class="checkbox-label">
+                    <input id="remember-me" class="checkbox"> Remember me
+                </label>
+                <a href="#" class="auth-link" onclick="showForgotPassword()">Forgot password?</a>
+            </div>
+
+            <button class="btn btn-primary btn-full" onclick="handleLogin()">
+                Sign In
+            </button>
+
+            <div class="auth-divider"><span>or</span></div>
+
+            <div class="auth-footer-text">
+                Don't have an account?
+                <a href="register.html" class="auth-link">Create one here</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div class="modal-overlay" id="forgot-modal">
+        <div class="modal">
+            <div class="modal-title">
+                Reset Password
+                <button class="modal-close" onclick="closeForgotPassword()">✕</button>
+            </div>
+            <div class="auth-card-subtitle" style="margin-bottom:20px;color:var(--muted2)">
+                Enter your username and we'll show you your security question.
+            </div>
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <input type="text" class="form-input" id="reset-username" placeholder="Your username">
+            </div>
+            <!-- Security question shown after username is found -->
+            <div id="security-question-wrap" style="display: none;">
+                <div class="form-group">
+                    <label id="security-question-text" class="form-label">Security Question</label>
+                    <input type="text" class="form-input" id="security-answer" placeholder="Your answer">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">New Password</label>
+                    <input class="form-input" type="password" id="new-password" placeholder="New password">
+                </div>
+            </div>
+            <div class="auth-error" id="reset-error" style="margin-bottom: 12px;">
+                <span>⚠</span>
+                <span id="reset-error-msg"></span>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeForgotPassword()">Cancel</button>
+                <button class="btn btn-primary" id="reset-btn" onclick="handleReset()">Find Account</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="firebase.js"></script>
+    <script src="auth.js"></script>
+</body>
+
+</html>

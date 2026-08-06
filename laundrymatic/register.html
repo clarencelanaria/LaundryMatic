@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaundryMatic — Register</title>
+    <link rel="stylesheet" href="style.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+</head>
+
+<body class="auth-body">
+
+    <div class="auth-wrapper">
+
+        <!-- Left branding panel (same as login) -->
+        <div class="auth-brand">
+            <div class="auth-brand-logo">
+                <div class="logo-icon" style="width:48px;height:48px;font-size:22px">🧺</div>
+            </div>
+            <div class="auth-brand-name">LaundryMatic</div>
+            <div class="auth-brand-tag">IoT Smart Weighing System</div>
+            <div class="auth-brand-desc">
+                Join LaundryMatic and take control of your laundry shop
+                with smart IoT-powered management tools.
+            </div>
+            <div class="auth-brand-dots">
+                <span class="dot"></span>
+                <span class="dot active"></span>
+                <span class="dot"></span>
+            </div>
+        </div>
+
+        <!-- Register form card -->
+        <div class="auth-card">
+
+            <div class="auth-card-header">
+                <div class="auth-card-title">Create account</div>
+                <div class="auth-card-subtitle">Set up your LaundryMatic admin account</div>
+            </div>
+
+            <div class="auth-error" id="register-error">
+                <span>⚠</span>
+                <span id="register-error-msg"></span>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">First Name</label>
+                    <input class="form-input" type="text" id="reg-firstname" placeholder="Juan">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Last Name</label>
+                    <input class="form-input" type="text" id="reg-lastname" placeholder="dela Cruz">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <input class="form-input" type="text" id="reg-username" placeholder="Choose a username">
+                <div class="field-hint" id="username-hint"></div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <div class="input-with-icon">
+                    <input class="form-input" type="password" id="reg-password" placeholder="Min. 6 characters"
+                        oninput="checkPasswordStrength(this.value)">
+                    <button class="input-icon-btn" onclick="togglePassword('reg-password', this)">👁</button>
+                </div>
+                <!-- Password strength bar -->
+                <div class="strength-bar-wrap">
+                    <div class="strength-bar" id="strength-bar"></div>
+                </div>
+                <div class="field-hint" id="strength-label"></div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Confirm Password</label>
+                <input class="form-input" type="password" id="reg-confirm" placeholder="Repeat your password">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Security Question</label>
+                <select class="form-input" id="reg-question">
+                    <option value="">Select a question...</option>
+                    <option>What is your mother's maiden name?</option>
+                    <option>What was the name of your first pet?</option>
+                    <option>What city were you born in?</option>
+                    <option>What is your favorite food?</option>
+                    <option>What was the name of your first school?</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Security Answer</label>
+                <input class="form-input" type="text" id="reg-answer" placeholder="Your answer (case-sensitive)">
+            </div>
+
+            <button class="btn btn-primary btn-full" onclick="handleRegister()">
+                Create Account
+            </button>
+
+            <div class="auth-divider"><span>or</span></div>
+
+            <div class="auth-footer-text">
+                Already have an account?
+                <a class="auth-link" href="index.html">Sign in here</a>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="auth.js"></script>
+</body>
+
+</html>

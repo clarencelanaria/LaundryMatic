@@ -1,0 +1,26 @@
+# Node dependencies — regenerated via npm install, don't commit
+**/node_modules/
+
+# Firebase Admin SDK credentials — NEVER commit this
+laundrymatic-bridge/serviceAccountKey.json
+
+# Expo / React Native build artifacts
+LaundryMatic_Mobile/.expo/
+LaundryMatic_Mobile/dist/
+LaundryMatic_Mobile/web-build/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# OS junk files
+.DS_Store
+Thumbs.db
+
+# WebStorm project settings — optional to ignore, keeps repo cleaner
+.idea/
+
+# Logs
+npm-debug.log*
+*.log

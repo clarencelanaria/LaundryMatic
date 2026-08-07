@@ -2536,3 +2536,21 @@ select.form-input option {
         font-size: 12px;
     }
 }
+
+/* ─── FORM FIELD VALIDATION ──────────────────────────────── */
+
+.field-error {
+  font-size: 0.72rem;
+  color: var(--danger);
+  margin-top: 4px;
+  min-height: 14px;
+  font-family: var(--font-mono);
+}
+
+.form-input.invalid {
+  border-color: var(--danger);
+}
+
+.form-input.invalid:focus {
+  border-color: var(--danger);
+}

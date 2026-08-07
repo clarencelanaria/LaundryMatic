@@ -78,6 +78,37 @@ function statusBadge(s) {
   const [cls, label] = map[s] || ['status-pending', s];
   return `<span class="status-badge ${cls}">${label}</span>`;
 }
+
+// ── VALIDATION HELPERS ───────────────────────────────────────
+
+// Philippine mobile format: 09XXXXXXXXX — exactly 11 digits, starts with 09
+function isValidPHContact(number) {
+    return /^09\d{9}$/.test(number);
+}
+
+// Strips everything except digits and caps length at 11 —
+// call this on input so the field can't even contain letters/symbols
+function sanitizeContactInput(value) {
+    return value.replace(/\D/g, '').slice(0, 11);
+}
+
+// Clears all inline error states in the Register Walk-in modal
+function clearRegisterErrors() {
+    ['firstname', 'lastname', 'contact1', 'contact2', 'address'].forEach(field => {
+        const errEl   = document.getElementById(`err-${field}`);
+        const inputEl = document.getElementById(`cust-${field}`);
+        if (errEl)   errEl.textContent = '';
+        if (inputEl) inputEl.classList.remove('invalid');
+    });
+}
+
+// Shows a red inline error under a specific field
+function showFieldError(field, message) {
+    const errEl   = document.getElementById(`err-${field}`);
+    const inputEl = document.getElementById(`cust-${field}`);
+    if (errEl)   errEl.textContent = message;
+    if (inputEl) inputEl.classList.add('invalid');
+}
 // Step 25: Render Functions
 // Fills a table tbody with order rows
 // target = the id of the tbody element
@@ -642,94 +673,6 @@ async function saveSettings() {
     }
 }
 
-// ── CUSTOMER REGISTRATION ────────────────────────────────────
-
-async function registerCustomer() {
-  const firstName = document.getElementById('cust-firstname').value.trim();
-  const lastName = document.getElementById('cust-lastname').value.trim();
-  const contact1 = document.getElementById('cust-contact1').value.trim();
-  const contact2 = document.getElementById('cust-contact2').value.trim();
-  const address = document.getElementById('cust-address').value.trim();
-  const fb = document.getElementById('cust-fb').value.trim();
-
-  if (!firstName || !lastName || !contact1 || !address) {
-    showToast('⚠️', 'Please fill in required fields.');
-    return;
-  }
-
-  try {
-    const userId = await saveCustomer({
-      firstName, lastName, contact1, contact2, address, fbAccount: fb,
-    });
-
-    // Show the QR code
-    const resultDiv = document.getElementById('customer-qr-result');
-    const qrDiv = document.getElementById('profile-qr-code');
-    const nameDiv = document.getElementById('profile-qr-name');
-
-    resultDiv.style.display = 'block';
-    qrDiv.innerHTML = '';  // clear previous QR
-
-    // Generate QR — the value is the userId
-    // When customer scans this, the app reads the userId and loads their orders
-    new QRCode(qrDiv, {
-      text: userId,
-      width: 180,
-      height: 180,
-      colorDark: '#4af4b0',
-      colorLight: '#111318',
-      correctLevel: QRCode.CorrectLevel.H
-    });
-
-    nameDiv.textContent = `${firstName} ${lastName} — ID: ${userId.slice(0, 8)}...`;
-
-    // Clear the form
-    ['cust-firstname', 'cust-lastname', 'cust-contact1', 'cust-contact2',
-      'cust-address', 'cust-fb'].forEach(id => {
-        document.getElementById(id).value = '';
-      });
-
-    showToast('✅', `Customer ${firstName} registered successfully.`);
-    loadCustomers();
-
-  } catch (err) {
-    showToast('⚠️', 'Error saving customer. Check your connection.');
-    console.error(err);
-  }
-}
-
-// Loads and renders the customers table
-async function loadCustomers() {
-  const customers = await getAllCustomers();
-  const el = document.getElementById('customers-body');
-  if (!el) return;
-
-  if (customers.length === 0) {
-    el.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted2);padding:24px">No customers yet.</td></tr>`;
-    return;
-  }
-
-  el.innerHTML = customers.map(c => `
-    <tr>
-      <td>
-        <div class="customer-cell">
-          <div class="mini-avatar" style="background:${avatarColor(c.firstName)}">
-            ${c.firstName[0]}${c.lastName[0]}
-          </div>
-          ${c.firstName} ${c.lastName}
-        </div>
-      </td>
-      <td style="font-family:var(--font-mono);font-size:0.8rem">${c.contact1}</td>
-      <td style="font-family:var(--font-mono);font-size:0.8rem">${c.contact2 || '—'}</td>
-      <td style="font-size:0.8rem;color:var(--muted2)">${c.address}</td>
-      <td>
-        <button class="action-btn" onclick="createOrderForCustomer('${c.id}', '${c.firstName} ${c.lastName}')">
-          New Order
-        </button>
-      </td>
-    </tr>
-  `).join('');
-}
 
 // ── ORDER SCAN MODAL ─────────────────────────────────────────
 
@@ -1400,6 +1343,13 @@ async function validateCustomer(userId) {
     const customer = await getCustomer(userId);
     if (!customer) return;
 
+      // Warn (don't block) if this contact matches another existing profile
+      const duplicate = await findCustomerByContact(customer.contact1);
+      if (duplicate && duplicate.id !== userId) {
+          showToast('⚠️',
+              `Note: this contact also exists under ${duplicate.firstName} ${duplicate.lastName}.`);
+      }
+
     showToast('✅',
       `${customer.firstName} ${customer.lastName} validated!`);
 
@@ -1422,30 +1372,6 @@ async function validateCustomer(userId) {
 
 // ── SHOW QR + PRINT ──────────────────────────────────────────
 
-function showCustomerQR(userId, firstName, lastName, contact1) {
-  const resultDiv = document.getElementById('customer-qr-result');
-  const qrDiv = document.getElementById('profile-qr-code');
-  const nameDiv = document.getElementById('profile-qr-name');
-
-  resultDiv.style.display = 'block';
-  qrDiv.innerHTML = '';
-
-  // Generate QR — value is the userId (permanent unique ID)
-  new QRCode(qrDiv, {
-    text: userId,
-    width: 180,
-    height: 180,
-    colorDark: '#000000',
-    colorLight: '#ffffff',
-    correctLevel: QRCode.CorrectLevel.H,
-  });
-
-  nameDiv.textContent =
-    `${firstName} ${lastName} · ${contact1}`;
-
-  // Scroll to it
-  resultDiv.scrollIntoView({ behavior: 'smooth' });
-}
 
 function printQR() {
   // QR is now inside the QR Result Modal (#qr-result-code)
@@ -1473,41 +1399,79 @@ function printQR() {
 }
 
 // ── STAFF REGISTERS A WALK-IN CUSTOMER ──────────────────────
-// Same as before but status is set to 'approved' immediately
-// because the staff is registering them in person
+// Status is set to 'approved' immediately since staff registers in person
+// Validates contact number format and checks for duplicates before saving
 
 async function registerCustomer() {
-  const firstName = document.getElementById('cust-firstname').value.trim();
-  const lastName = document.getElementById('cust-lastname').value.trim();
-  const contact1 = document.getElementById('cust-contact1').value.trim();
-  const contact2 = document.getElementById('cust-contact2').value.trim();
-  const address = document.getElementById('cust-address').value.trim();
-  const fb = document.getElementById('cust-fb').value.trim();
+    clearRegisterErrors();
 
-  if (!firstName || !lastName || !contact1 || !address) {
-    showToast('⚠️', 'Please fill in required fields.');
-    return;
-  }
+    const firstName = document.getElementById('cust-firstname').value.trim();
+    const lastName  = document.getElementById('cust-lastname').value.trim();
+    const contact1  = document.getElementById('cust-contact1').value.trim();
+    const contact2  = document.getElementById('cust-contact2').value.trim();
+    const address   = document.getElementById('cust-address').value.trim();
+    const fb        = document.getElementById('cust-fb').value.trim();
 
-  try {
-    const userId = await saveCustomer({
-      firstName, lastName, contact1, contact2,
-      address, fbAccount: fb,
-      status: 'approved',
-    });
+    let hasError = false;
 
-    closeRegisterModal();
+    if (!firstName) { showFieldError('firstname', 'First name is required.'); hasError = true; }
+    if (!lastName)  { showFieldError('lastname',  'Last name is required.');  hasError = true; }
+    if (!address)   { showFieldError('address',   'Address is required.');    hasError = true; }
 
-    // Show QR result modal instead of inline card
-    showAndOpenQRResult(userId, firstName, lastName, contact1);
+    if (!contact1) {
+        showFieldError('contact1', 'Contact number is required.');
+        hasError = true;
+    } else if (!isValidPHContact(contact1)) {
+        showFieldError('contact1', 'Must be 11 digits starting with 09 (e.g. 09171234567).');
+        hasError = true;
+    }
 
-    showToast('✅', `${firstName} registered and approved.`);
-    await loadApprovedCustomers();
+    if (contact2) {
+        if (!isValidPHContact(contact2)) {
+            showFieldError('contact2', 'Must be 11 digits starting with 09.');
+            hasError = true;
+        } else if (contact2 === contact1) {
+            showFieldError('contact2', 'Cannot be the same as Contact 1.');
+            hasError = true;
+        }
+    }
 
-  } catch (err) {
-    showToast('⚠️', 'Error saving customer.');
-    console.error(err);
-  }
+    if (hasError) {
+        showToast('⚠️', 'Please fix the highlighted fields.');
+        return;
+    }
+
+    try {
+        const existing = await findCustomerByContact(contact1);
+        if (existing) {
+            showFieldError('contact1',
+                `Already registered to ${existing.firstName} ${existing.lastName}.`);
+            showToast('⚠️', 'This contact number is already registered.');
+            return;
+        }
+
+        const userId = await saveCustomer({
+            firstName, lastName, contact1, contact2,
+            address, fbAccount: fb,
+            status: 'approved',
+        });
+
+        closeRegisterModal();
+        showAndOpenQRResult(userId, firstName, lastName, contact1);
+
+        clearRegisterErrors();
+        ['cust-firstname','cust-lastname','cust-contact1','cust-contact2',
+            'cust-address','cust-fb'].forEach(id => {
+            document.getElementById(id).value = '';
+        });
+
+        showToast('✅', `${firstName} registered and approved.`);
+        await loadApprovedCustomers();
+
+    } catch (err) {
+        showToast('⚠️', 'Error saving customer.');
+        console.error(err);
+    }
 }
 
 // ── RECEIPT ──────────────────────────────────────────────────

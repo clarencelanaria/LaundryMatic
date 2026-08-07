@@ -854,25 +854,34 @@
                 <div class="form-group">
                     <label class="form-label">First Name</label>
                     <input class="form-input" type="text" id="cust-firstname" placeholder="Juan">
+                    <div class="field-error" id="err-firstname"></div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Last Name</label>
                     <input class="form-input" type="text" id="cust-lastname" placeholder="dela Cruz">
+                    <div class="field-error" id="err-lastname"></div>
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label">Contact Number 1</label>
-                    <input class="form-input" type="tel" id="cust-contact1" placeholder="09171234567">
+                    <input class="form-input" type="tel" id="cust-contact1"
+                           placeholder="09171234567" maxlength="11"
+                           oninput="this.value = sanitizeContactInput(this.value)">
+                    <div class="field-error" id="err-contact1"></div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Contact Number 2</label>
-                    <input class="form-input" type="tel" id="cust-contact2" placeholder="09281234567">
+                    <input class="form-input" type="tel" id="cust-contact2"
+                           placeholder="09281234567 (optional)" maxlength="11"
+                           oninput="this.value = sanitizeContactInput(this.value)">
+                    <div class="field-error" id="err-contact2"></div>
                 </div>
             </div>
             <div class="form-group">
                 <label class="form-label">Address</label>
                 <input class="form-input" type="text" id="cust-address" placeholder="Calinog, Iloilo">
+                <div class="field-error" id="err-address"></div>
             </div>
             <div class="form-group">
                 <label class="form-label">Facebook Account</label>

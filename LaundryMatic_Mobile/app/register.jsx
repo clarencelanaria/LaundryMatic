@@ -9,7 +9,7 @@ import {
 import AuthInput from '../components/AuthInput';
 import AuthButton from '../components/AuthButton';
 import Colors from '../constants/colors';
-import { registerCustomerMobile } from '../utils/firebase';
+import { registerCustomerMobile, checkDuplicateContact } from '../utils/firebase';
 import {
   setCurrentUser, getUsers,
   saveUsers, findUser
@@ -60,6 +60,15 @@ export default function RegisterScreen() {
   const strength = password.length > 0 ? getStrength(password) : 0;
   const strengthLevel = strengthLevels[strength];
 
+  // Philippine mobile format: 09XXXXXXXXX
+  function isValidPHContact(number) {
+    return /^09\d{9}$/.test(number);
+  }
+
+  function sanitizeContactInput(value) {
+    return value.replace(/\D/g, '').slice(0, 11);
+  }
+
   function cycleQuestion() {
     setQuestionIndex(i => (i + 1) % QUESTIONS.length);
   }
@@ -67,12 +76,26 @@ export default function RegisterScreen() {
   async function handleRegister() {
     setError('');
 
-    // Validate all required fields
     if (!firstName || !lastName || !contact1 || !address ||
-      !username || !password || !confirm || !answer) {
+        !username  || !password || !confirm  || !answer) {
       setError('Please fill in all required fields.');
       return;
     }
+
+    // ── Contact format validation ─────────────────────────────
+    if (!isValidPHContact(contact1)) {
+      setError('Contact Number 1 must be 11 digits starting with 09.');
+      return;
+    }
+    if (contact2 && !isValidPHContact(contact2)) {
+      setError('Contact Number 2 must be 11 digits starting with 09.');
+      return;
+    }
+    if (contact2 && contact2 === contact1) {
+      setError('Contact Number 2 cannot match Contact Number 1.');
+      return;
+    }
+
     if (password.length < 6) {
       setError('Password must be at least 6 characters.');
       return;
@@ -85,7 +108,6 @@ export default function RegisterScreen() {
     setLoading(true);
 
     try {
-      // Check username not taken in local storage
       const existing = await findUser(username);
       if (existing) {
         setError('That username is already taken.');
@@ -93,16 +115,18 @@ export default function RegisterScreen() {
         return;
       }
 
-      // Save to Firebase — returns the unique userId
-      // This is what becomes the QR code value
+      // ── Duplicate contact check against Firebase ─────────────
+      const duplicateCustomer = await checkDuplicateContact(contact1);
+      if (duplicateCustomer) {
+        setError('This contact number is already registered to another account.');
+        setLoading(false);
+        return;
+      }
+
       const userId = await registerCustomerMobile({
-        firstName,
-        lastName,
-        contact1,
-        contact2,
-        address,
-        fbAccount,
-        status: 'pending',   // admin must validate before appearing in dashboard
+        firstName, lastName, contact1, contact2,
+        address, fbAccount,
+        status: 'pending',
       });
 
       // Save login credentials to local storage (AsyncStorage)
@@ -187,19 +211,19 @@ export default function RegisterScreen() {
           </View>
 
           <AuthInput
-            label="Contact Number 1"
-            placeholder="09171234567"
-            value={contact1}
-            onChangeText={setContact1}
-            keyboardType="phone-pad"
+              label="Contact Number 1"
+              placeholder="09171234567"
+              value={contact1}
+              onChangeText={(text) => setContact1(sanitizeContactInput(text))}
+              keyboardType="phone-pad"
           />
 
           <AuthInput
-            label="Contact Number 2 (optional)"
-            placeholder="09281234567"
-            value={contact2}
-            onChangeText={setContact2}
-            keyboardType="phone-pad"
+              label="Contact Number 2 (optional)"
+              placeholder="09281234567"
+              value={contact2}
+              onChangeText={(text) => setContact2(sanitizeContactInput(text))}
+              keyboardType="phone-pad"
           />
 
           <AuthInput

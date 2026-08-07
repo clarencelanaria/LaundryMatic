@@ -39,6 +39,20 @@ export async function getOrdersForUser(userId) {
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
+// Checks if a contact number is already registered — mirrors the
+// same check on the web dashboard so both sides stay consistent
+export async function checkDuplicateContact(contact) {
+    const snapshot = await get(ref(db, 'users'));
+    const data = snapshot.val();
+    if (!data) return null;
+
+    const entry = Object.entries(data).find(
+        ([id, u]) => u.contact1 === contact || u.contact2 === contact
+    );
+
+    return entry ? { id: entry[0], ...entry[1] } : null;
+}
+
 // Gets one order by orderId (when customer scans order QR)
 export async function getOrderById(orderId) {
     const snapshot = await get(ref(db, `orders/${orderId}`));

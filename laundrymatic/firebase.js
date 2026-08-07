@@ -156,6 +156,20 @@ async function updateOrderStatus(orderId, newStatus) {
     }
 }
 
+// Checks if a contact number already belongs to another registered
+// customer (pending or approved) — prevents split/duplicate profiles
+async function findCustomerByContact(contact) {
+    const snapshot = await db.ref('users').once('value');
+    const data = snapshot.val();
+    if (!data) return null;
+
+    const match = Object.entries(data).find(([id, u]) =>
+        u.contact1 === contact || u.contact2 === contact
+    );
+
+    return match ? { id: match[0], ...match[1] } : null;
+}
+
 async function getOrderByQR(qrValue) {
     const snapshot = await db.ref(`orders/${qrValue}`).once('value');
     return snapshot.val();

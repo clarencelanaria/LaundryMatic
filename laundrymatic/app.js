@@ -2351,4 +2351,23 @@ window.addEventListener('DOMContentLoaded', async () => {
       dropdown.style.display = "none";
     }
   });
+
+    // ── AUTO-CAPTURE SCANNER INPUT — Pending Validation Modal ────
+// Removes the requirement to manually click into the scan field.
+// The instant a keystroke arrives while this modal is open, we
+// redirect focus into the scan input first — so it doesn't matter
+// what (or nothing) had focus when the admin started scanning.
+    document.addEventListener('keydown', function (e) {
+        const modal = document.getElementById('pending-modal');
+        if (!modal || !modal.classList.contains('open')) return;
+
+        const input = document.getElementById('validation-scan-input');
+        if (!input || document.activeElement === input) return;
+
+        // Only redirect on printable characters — leaves Tab, Escape,
+        // and button-activation keys (Space/Enter) completely alone
+        if (e.key.length === 1) {
+            input.focus();
+        }
+    });
 });

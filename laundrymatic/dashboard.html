@@ -667,7 +667,7 @@
                 <div class="receipt-divider">
                     ····················································
                 </div>
-                
+
                 <!-- QR Codes -->
                 <!-- Job Order QR — single code, given full width for readability -->
                 <div class="receipt-qr-section">
@@ -902,17 +902,16 @@
             <div style="margin-bottom:16px">
                 <label class="form-label">Scan QR to Validate</label>
                 <div style="display:flex;gap:10px;align-items:center">
-                    <input class="form-input" type="text" id="validation-scan-input"
-                        placeholder="Click here then scan customer QR..." style="border-color:var(--accent);flex:1"
-                        onkeydown="handleValidationScan(event)" autocomplete="off">
-                    <button class="btn btn-ghost" onclick="document.getElementById(
-                  'validation-scan-input').focus()">
-                        📷 Focus
-                    </button>
+                    <input class="form-input" type="text"
+                           id="validation-scan-input"
+                           placeholder="Scan any customer QR — no click needed"
+                           style="border-color:var(--accent);flex:1"
+                           onkeydown="handleValidationScan(event)"
+                           autocomplete="off">
                 </div>
                 <div style="font-size:0.72rem;color:var(--muted2);
-                  margin-top:6px;font-family:var(--font-mono)">
-                    Thermal scanner types the QR value and presses Enter automatically.
+              margin-top:6px;font-family:var(--font-mono)">
+                    This window automatically captures the scan — just start scanning.
                 </div>
             </div>
 

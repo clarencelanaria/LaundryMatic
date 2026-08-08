@@ -1,6 +1,7 @@
 // app/showQR.jsx
 import React, { useRef } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import * as Brightness from 'expo-brightness';
 import {
     View, Text, StyleSheet,
     ScrollView, TouchableOpacity,
@@ -12,6 +13,30 @@ export default function ShowQRScreen() {
     const router = useRouter();
     const { userId, firstName, lastName, contact1 } = useLocalSearchParams();
     const qrRef = useRef();
+
+    useEffect(() => {
+        let originalBrightness = null;
+
+        async function boostBrightness() {
+            try {
+                const { status } = await Brightness.requestPermissionsAsync();
+                if (status === 'granted') {
+                    originalBrightness = await Brightness.getBrightnessAsync();
+                    await Brightness.setBrightnessAsync(1);
+                }
+            } catch (err) {
+                console.warn('Brightness adjustment not available:', err);
+            }
+        }
+
+        boostBrightness();
+
+        return () => {
+            if (originalBrightness !== null) {
+                Brightness.setBrightnessAsync(originalBrightness).catch(() => {});
+            }
+        };
+    }, []);
 
     return (
         <ScrollView
@@ -35,9 +60,11 @@ export default function ShowQRScreen() {
                 <View style={styles.qrBox}>
                     <QRCode
                         value={userId}
-                        size={200}
-                        color={Colors.bg}
+                        size={220}
+                        color="#000000"
                         backgroundColor="#ffffff"
+                        ecl="H"
+                        quietZone={12}
                         getRef={qrRef}
                     />
                 </View>

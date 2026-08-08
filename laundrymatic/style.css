@@ -1991,23 +1991,22 @@ select.form-input option {
   gap: 6px;
 }
 
-.receipt-qr-divider {
-  width: 1px;
-  background: var(--border);
-  margin: 0 16px;
-  align-self: stretch;
-}
-
 /* QR box — screen size */
 .receipt-qr-box {
-  width: 120px;
-  height: 120px;
-  background: #fff;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+    width: 120px;
+    height: 120px;
+    background: #fff;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.receipt-qr-box img,
+.receipt-qr-box canvas {
+    width: 110px !important;
+    height: 110px !important;
 }
 
 /* Force QR images to fit */
@@ -2071,14 +2070,14 @@ select.form-input option {
 
   /* Override QR box size for narrow paper */
   #print-receipt-area .receipt-qr-box {
-    width: 80px !important;
-    height: 80px !important;
+    width: 130px !important;
+    height: 130px !important;
   }
 
   #print-receipt-area .receipt-qr-box img,
   #print-receipt-area .receipt-qr-box canvas {
-    width: 72px !important;
-    height: 72px !important;
+    width: 120px !important;
+    height: 120px !important;
   }
 
   /* Override total value size for narrow paper */
@@ -2136,10 +2135,6 @@ select.form-input option {
 
   #print-receipt-area .receipt-footer {
     color: #777 !important;
-  }
-
-  #print-receipt-area .receipt-qr-divider {
-    background: #ccc !important;
   }
 
   #print-receipt-area .receipt-qr-label {

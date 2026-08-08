@@ -1531,31 +1531,21 @@ function showReceiptModal(order, customer) {
 
   // ── Generate Order QR (specific order) ───────────────────
 
-  const orderQRBox = document.getElementById('r-order-qr');
-  orderQRBox.innerHTML = '';
+    // ── Generate Job Order QR ─────────────────────────────────
+// Larger now that it's the only QR on the receipt —
+// full width means it can afford more modules-per-inch clarity
 
-  new QRCode(orderQRBox, {
-    text: order.orderId,
-    width: 110,
-    height: 110,
-    colorDark: '#000000',
-    colorLight: '#ffffff',
-    correctLevel: QRCode.CorrectLevel.H,
-  });
+    const orderQRBox = document.getElementById('r-order-qr');
+    orderQRBox.innerHTML = '';
 
-  // ── Generate Profile QR (all orders for this customer) ───
-
-  const profileQRBox = document.getElementById('r-profile-qr');
-  profileQRBox.innerHTML = '';
-
-  new QRCode(profileQRBox, {
-    text: customer.id,
-    width: 110,
-    height: 110,
-    colorDark: '#000000',
-    colorLight: '#ffffff',
-    correctLevel: QRCode.CorrectLevel.H,
-  });
+    new QRCode(orderQRBox, {
+        text:         order.orderId,
+        width:        160,
+        height:       160,
+        colorDark:    '#000000',
+        colorLight:   '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H,
+    });
 
   // ── Open the modal ────────────────────────────────────────
   document.getElementById('receipt-modal').classList.add('open');

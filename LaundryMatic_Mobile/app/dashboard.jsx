@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import QRCode from 'react-native-qrcode-svg';
 import { useRouter } from 'expo-router';
+import * as Brightness from 'expo-brightness';
 import {
   View, Text, StyleSheet,
   TouchableOpacity, ScrollView,
@@ -33,11 +34,20 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [originalBrightness, setOriginalbrightness] = useState(null);
   const [username, setUsername] = useState('');
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (originalBrightness !== null) {
+        Brightness.setBrightnessAsync(originalBrightness).catch(() => {});
+      }
+    };
+  }, [originalBrightness]);
 
   async function loadData() {
   try {
@@ -89,6 +99,30 @@ export default function DashboardScreen() {
     setRefreshing(false);
   }
 }
+
+// Toggles the QR card and boosts screen brightness while it's shown —
+// glare/dim screens are the #1 cause of failed scans in real shop lighting
+  async function toggleQR() {
+    const next = !showQR;
+    setShowQR(next);
+
+    try {
+      if (next) {
+        const { status } = await Brightness.requestPermissionsAsync();
+        if (status === 'granted') {
+          const current = await Brightness.getBrightnessAsync();
+          setOriginalBrightness(current);
+          await Brightness.setBrightnessAsync(1);
+        }
+      } else if (originalBrightness !== null) {
+        await Brightness.setBrightnessAsync(originalBrightness);
+        setOriginalBrightness(null);
+      }
+    } catch (err) {
+      // Some devices/emulators don't support brightness control — fail silently
+      console.warn('Brightness adjustment not available:', err);
+    }
+  }
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -220,7 +254,7 @@ export default function DashboardScreen() {
               </View>
               <TouchableOpacity
                 style={styles.qrToggleBtn}
-                onPress={() => setShowQR(v => !v)}
+                onPress={toggleQR}
               >
                 <Text style={styles.qrToggleBtnText}>
                   {showQR ? 'Hide' : 'Show QR'}
@@ -235,10 +269,12 @@ export default function DashboardScreen() {
                 {/* The actual QR code */}
                 <View style={styles.qrCodeBox}>
                   <QRCode
-                    value={customer.id}
-                    size={200}
-                    color="#000000"
-                    backgroundColor="#ffffff"
+                      value={customer.id}
+                      size={220}
+                      color="#000000"
+                      backgroundColor="#ffffff"
+                      ecl="H"
+                      quietZone={12}
                   />
                 </View>
 
@@ -606,7 +642,7 @@ const styles = StyleSheet.create({
   },
 
   qrCodeBox: {
-    padding: 16,
+    padding: 20,
     backgroundColor: '#ffffff',
     borderRadius: 12,
     marginBottom: 16,

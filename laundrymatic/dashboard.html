@@ -75,16 +75,12 @@
             <div class="page-title" id="page-title">Overview</div>
             <div class="topbar-actions">
 
-                <!-- Thermal scanner input — always focused when visible -->
-                <!-- Staff clicks the scan icon then scans the QR with the thermal scanner -->
-                <div class="scan-input-wrap" id="scan-wrap" style="display:none">
-                    <input class="form-input scan-input" type="text" id="scan-input" placeholder="Scan QR now..."
-                        onchange="handleQRScan(this.value)" autocomplete="off">
+                <div class="scan-input-wrap" id="scan-wrap">
+                    <div class="live-dot"></div>
+                    <input class="scan-input" type="text" id="scan-input"
+                           placeholder="Scan customer or job order QR..."
+                           onchange="handleQRScan(this.value)" autocomplete="off">
                 </div>
-
-                <button class="btn btn-ghost" id="scan-toggle-btn" onclick="toggleScanInput()">
-                    📷 Scan QR
-                </button>
 
                 <div class="sensor-indicator">
                     <div class="live-dot"></div>

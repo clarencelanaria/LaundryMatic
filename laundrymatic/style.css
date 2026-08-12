@@ -1797,15 +1797,29 @@ select.form-input option {
 
 /* ─── SCAN INPUT IN TOPBAR ───────────────────────────────── */
 .scan-input-wrap {
-  display: flex;
-  align-items: center;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 6px 12px;
+    width: 240px;
 }
 
 .scan-input {
-  width: 200px;
-  padding: 7px 12px;
-  font-size: 0.825rem;
-  border-color: var(--accent);
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 0.825rem;
+    width: 100%;
+    padding: 0;
+}
+
+.scan-input::placeholder {
+    color: var(--muted);
 }
 
 /* ─── PENDING BADGE ON CUSTOMER TAB ─────────────────────── */

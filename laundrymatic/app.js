@@ -707,7 +707,6 @@ async function handleQRScan(value) {
   // Clear and hide the topbar scan input
   const input = document.getElementById('scan-input');
   if (input) input.value = '';
-  toggleScanInput();
 
   if (!qrValue) return;
 
@@ -1574,27 +1573,6 @@ function printReceipt() {
   }, 300);
 }
 
-// ── TOPBAR SCAN TOGGLE ───────────────────────────────────────
-// Called by the "📷 Scan QR" button in the topbar
-// Shows/hides the thermal scanner input field
-
-function toggleScanInput() {
-  const wrap = document.getElementById('scan-wrap');
-  const input = document.getElementById('scan-input');
-  const btn = document.getElementById('scan-toggle-btn');
-
-  if (wrap.style.display === 'none' || wrap.style.display === '') {
-    // Show the input and focus it so scanner can type into it
-    wrap.style.display = 'flex';
-    input.value = '';
-    input.focus();
-    btn.textContent = '✕ Cancel Scan';
-  } else {
-    // Hide it
-    wrap.style.display = 'none';
-    btn.textContent = '📷 Scan QR';
-  }
-}
 
 // ── CREATE ORDER FROM PROFILE SCAN MODAL ─────────────────────
 // Called by the "+ New Order for this Customer" button
@@ -2309,6 +2287,28 @@ window.addEventListener('DOMContentLoaded', async () => {
       dropdown.style.display = "none";
     }
   });
+
+    // ── GLOBAL AUTO-CAPTURE — Customer/Job Order Scanning ────────
+// The admin can pick up the scanner and scan from ANY screen in
+// the app, with zero clicks. The instant a keystroke arrives and
+// nothing else is actively being typed into, we silently redirect
+// it into the scan input. If the admin IS typing in any other
+// field anywhere (a form, a search box, a modal) we back off
+// completely and leave that field alone.
+    document.addEventListener('keydown', function (e) {
+        const scanInput = document.getElementById('scan-input');
+        if (!scanInput) return;
+
+        const active = document.activeElement;
+        const tag    = active ? active.tagName : '';
+        const isEditableFocused = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+
+        if (isEditableFocused) return;
+
+        if (e.key.length === 1) {
+            scanInput.focus();
+        }
+    });
 
     // ── AUTO-CAPTURE SCANNER INPUT — Pending Validation Modal ────
 // Removes the requirement to manually click into the scan field.

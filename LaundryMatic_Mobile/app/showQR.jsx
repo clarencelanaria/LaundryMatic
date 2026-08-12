@@ -1,5 +1,5 @@
 // app/showQR.jsx
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Brightness from 'expo-brightness';
 import {

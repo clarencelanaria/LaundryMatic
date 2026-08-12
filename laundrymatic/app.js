@@ -60,10 +60,11 @@ function avatarColor(name) {
 
 // Calculates the service cost
 // Express gets +30%, minimum charge is ₱50
-function cost(w, s) {
-  let r = w * RATE;
-  if (s && s.includes('Express')) r *= 1.3;
-  return Math.max(r, 50);
+// Simplified after scoping the system to Wash & Dry only —
+// no more service-type multiplier needed
+function cost(w) {
+    const r = w * RATE;
+    return Math.max(r, 50);
 }
 
 // Builds the HTML string for a colored status badge
@@ -130,7 +131,7 @@ function renderOrders(target, data) {
       </td>
       <td><span class="weight-cell">${o.weight.toFixed(1)} kg</span></td>
       <td><span style="font-size:0.8rem;color:var(--muted2)">${o.service}</span></td>
-      <td><span class="cost-cell">₱${cost(o.weight, o.service).toFixed(0)}</span></td>
+      <td><span class="cost-cell">₱${cost(o.weight).toFixed(0)}</span></td>
       <td>${statusBadge(o.status)}</td>
       <td><span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--muted2)">${o.time}</span></td>
     </tr>
@@ -525,7 +526,7 @@ function updateDashboardKPIs(orders) {
 function updateCost() {
   const w = getActiveWeight();
   const s = document.getElementById('form-service').value;
-  document.getElementById('form-cost').textContent = '₱' + cost(w, s).toFixed(0);
+  document.getElementById('form-cost').textContent = '₱' + cost(w).toFixed(0);
 }
 
 // Handles the Create Order button
@@ -557,7 +558,7 @@ async function submitOrder() {
     const orderId = await createOrder(selectedCustomer.id, {
       customerName: `${selectedCustomer.firstName} ${selectedCustomer.lastName}`,
       kg: w,
-      amount: cost(w, s),
+      amount: cost(w),
       service: s,
       notes: notes,
     });
@@ -2104,7 +2105,6 @@ async function loadReport() {
 
     renderReportSummary(filtered);
     renderReportChart(filtered, currentReportPeriod, start, end);
-    renderServiceBreakdown(filtered);
 }
 
 // Fills the 4 KPI cards
@@ -2206,42 +2206,6 @@ function renderReportChart(orders, period, start, end) {
     renderReportRevenueChart(data, labels);
 }
 
-// Fills the Breakdown by Service Type table
-function renderServiceBreakdown(orders) {
-    const el = document.getElementById('report-service-body');
-    if (!el) return;
-
-    const totalRevenue = orders.reduce((sum, o) => sum + (o.amount || 0), 0);
-
-    const grouped = {};
-    orders.forEach(o => {
-        const service = o.service || 'Unknown';
-        if (!grouped[service]) grouped[service] = { orders: 0, weight: 0, revenue: 0 };
-        grouped[service].orders  += 1;
-        grouped[service].weight  += (o.kg || 0);
-        grouped[service].revenue += (o.amount || 0);
-    });
-
-    const rows = Object.entries(grouped).sort((a, b) => b[1].revenue - a[1].revenue);
-
-    if (rows.length === 0) {
-        el.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted2);padding:24px">No job orders in this period.</td></tr>`;
-        return;
-    }
-
-    el.innerHTML = rows.map(([service, s]) => {
-        const pct = totalRevenue > 0 ? (s.revenue / totalRevenue) * 100 : 0;
-        return `
-      <tr>
-        <td>${service}</td>
-        <td>${s.orders}</td>
-        <td><span class="weight-cell">${s.weight.toFixed(1)} kg</span></td>
-        <td><span class="cost-cell">₱${Math.round(s.revenue).toLocaleString()}</span></td>
-        <td>${pct.toFixed(1)}%</td>
-      </tr>
-    `;
-    }).join('');
-}
 
 // Builds a printable version of the current report and opens print dialog
 function printReport() {
@@ -2250,7 +2214,6 @@ function printReport() {
     const totalWeight  = document.getElementById('report-total-weight').textContent;
     const totalRevenue = document.getElementById('report-total-revenue').textContent;
     const avgOrder     = document.getElementById('report-avg-order').textContent;
-    const serviceRows  = document.getElementById('report-service-body').innerHTML;
 
     const printArea = document.getElementById('print-report-area');
 
@@ -2266,11 +2229,6 @@ function printReport() {
       <tr><td style="font-weight:600">Total Weight</td><td>${totalWeight} kg</td></tr>
       <tr><td style="font-weight:600">Total Revenue</td><td>${totalRevenue}</td></tr>
       <tr><td style="font-weight:600">Average per Order</td><td>${avgOrder}</td></tr>
-    </table>
-    <div style="font-weight:700;margin-bottom:8px">Breakdown by Service Type</div>
-    <table>
-      <thead><tr><th>Service</th><th>Job Orders</th><th>Weight</th><th>Revenue</th><th>% of Revenue</th></tr></thead>
-      <tbody>${serviceRows}</tbody>
     </table>
     <div style="margin-top:24px;font-size:0.75rem;color:#888;text-align:center">
       Generated on ${new Date().toLocaleString('en-PH')}

@@ -328,23 +328,7 @@
                 <div class="chart-area" id="report-chart-area"></div>
             </div>
 
-            <div class="table-card">
-                <div class="table-head">
-                    <div class="card-title">Breakdown by Service Type</div>
-                </div>
-                <table>
-                    <thead>
-                    <tr>
-                        <th>Service</th>
-                        <th>Job Orders</th>
-                        <th>Total Weight</th>
-                        <th>Total Revenue</th>
-                        <th>% of Revenue</th>
-                    </tr>
-                    </thead>
-                    <tbody id="report-service-body"></tbody>
-                </table>
-            </div>
+
 
         </div><!-- /page-reports -->
 
@@ -517,12 +501,8 @@
             <!-- ── SERVICE TYPE ─────────────────────────────────── -->
             <div class="form-group">
                 <label class="form-label">Service Type</label>
-                <select class="form-input" id="form-service" onchange="updateCost()">
+                <select class="form-input" id="form-service" onchange="updateCost()" disabled>
                     <option>Wash &amp; Dry</option>
-                    <option>Wash Only</option>
-                    <option>Dry Only</option>
-                    <option>Express Wash &amp; Dry</option>
-                    <option>Fold &amp; Press</option>
                 </select>
             </div>
 

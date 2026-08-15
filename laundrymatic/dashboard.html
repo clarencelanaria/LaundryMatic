@@ -86,6 +86,14 @@
                     <div class="live-dot"></div>
                     Sensor Active
                 </div>
+
+                <!-- Always-visible live weight — replaces the old removed gauge widget -->
+                <div class="live-weight-pill" id="topbar-weight-pill">
+                    <span class="live-weight-pill-icon">⚖</span>
+                    <span class="live-weight-pill-value" id="topbar-live-weight">0.00</span>
+                    <span class="live-weight-pill-unit">kg</span>
+                </div>
+
                 <button class="btn btn-ghost" onclick="openModal()">+ New Job Order</button>
                 <button class="btn btn-primary" onclick="refreshWeight()">↻ Refresh</button>
             </div>

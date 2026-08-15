@@ -427,66 +427,85 @@ async function loadSettingsIntoForm() {
 // Connects to Firebase and listens for real Arduino readings
 // Replaces the fake setInterval simulation
 function startLiveWeight() {
-  listenToLiveWeight((kg, updatedAt) => {
-    liveW = kg;
-    const display = kg.toFixed(2);
+    listenToLiveWeight((kg, updatedAt, active) => {
+        liveW = kg;
+        const display = kg.toFixed(2);
 
-    // Update dashboard scale number
-    const el1 = document.getElementById('live-weight');
-    if (el1) el1.textContent = display;
+        // Topbar pill — always visible, on every page, no modal needed.
+        // This is the fix: previously the only live-weight target left
+        // in the DOM was inside the (hidden-until-opened) New Job Order
+        // modal, so nothing visibly updated on the main dashboard.
+        const topbarPill = document.getElementById('topbar-weight-pill');
+        const topbarW     = document.getElementById('topbar-live-weight');
+        if (topbarW)    topbarW.textContent = display;
+        if (topbarPill) topbarPill.classList.toggle('active', !!active);
 
-    // Update weight monitor gauge number
-    const el2 = document.getElementById('gauge-weight');
-    if (el2) el2.textContent = display;
-
-    //keep the modal live weight in sync too
-    const modalW = document.getElementById('modal-live-weight');
-    if (modalW) {
-      modalW.textContent = display;
-      // Trigger cost update in real-time
-      updateCost();
-    }
-
-    // Update SVG gauge arc
-    const fill = document.getElementById('gauge-fill');
-    if (fill) {
-      const pct = kg / 50;
-      const circ = 565.5;
-      const arc = circ * 0.75;
-      fill.style.strokeDashoffset = circ - (arc * pct);
-    }
-
-    // Update CSS border arc
-    const arc = document.getElementById('scale-arc');
-    if (arc) {
-      const deg = (kg / 50) * 270;
-      arc.style.transform = `rotate(${-45 + deg}deg)`;
-    }
-  });
+        // Modal's own live weight display — still works exactly as before
+        const modalW = document.getElementById('modal-live-weight');
+        if (modalW) {
+            modalW.textContent = display;
+            updateCost();
+        }
+    });
 }
 //Step 29: Modal Logic
 // Opens the modal and auto-fills the weight from the live sensor
 
-function openModal() {
-  selectedCustomer = null;
-  weightMode = 'live';
+// Fills the customer chip UI from a customer object that already
+// includes .id — pulled out so every "open modal with a known
+// customer" caller uses one single, correct implementation
+// instead of five slightly-different copies of the same block.
+function populateSelectedCustomerChip(customer) {
+    selectedCustomer = {
+        id:        customer.id,
+        firstName: customer.firstName,
+        lastName:  customer.lastName,
+        contact1:  customer.contact1 || '',
+        contact2:  customer.contact2 || '',
+    };
 
-  document.getElementById('customer-search').value = '';
-  document.getElementById('customer-clear').style.display = 'none';
-  document.getElementById('customer-dropdown').style.display = 'none';
-  document.getElementById('selected-customer').style.display = 'none';
+    document.getElementById('customer-clear').style.display = 'block';
+    document.getElementById('selected-avatar').textContent =
+        customer.firstName[0] + (customer.lastName[0] || '');
+    document.getElementById('selected-name').textContent =
+        `${customer.firstName} ${customer.lastName}`;
+    document.getElementById('selected-contact').textContent =
+        customer.contact1 + (customer.contact2 ? ' · ' + customer.contact2 : '');
+    document.getElementById('selected-customer').style.display = 'flex';
+}
 
-  // FIX: Change 'form-weight' to 'form-weight-input'
-  document.getElementById('form-weight-input').value = '';
-  document.getElementById('form-weight-input').style.display = 'none';
+// Opens the New Job Order modal.
+// prefillCustomer (optional) — pass a customer object (with .id) to
+// open the modal already pointed at that customer, e.g. straight
+// from a QR scan. Pass nothing for a normal blank modal.
+//
+// This replaces the old "reset everything, then hope something
+// re-populates it afterward" pattern. The customer state is now
+// decided ONCE, synchronously, before the modal is ever shown —
+// there's no window where a half-reset state can leak through,
+// regardless of what future edits get added to this function.
+function openModal(prefillCustomer = null) {
+    weightMode = 'live';
 
-  document.getElementById('form-notes').value = '';
-  document.getElementById('weight-live-display').style.display = 'flex';
-  document.getElementById('manual-checkbox').checked = false;
-  document.getElementById('modal-live-weight').textContent = liveW.toFixed(2);
+    document.getElementById('form-weight-input').value = '';
+    document.getElementById('form-weight-input').style.display = 'none';
+    document.getElementById('form-notes').value = '';
+    document.getElementById('weight-live-display').style.display = 'flex';
+    document.getElementById('manual-checkbox').checked = false;
+    document.getElementById('modal-live-weight').textContent = liveW.toFixed(2);
 
-  updateCost();
-  document.getElementById('modal').classList.add('open');
+    if (prefillCustomer) {
+        populateSelectedCustomerChip(prefillCustomer);
+    } else {
+        selectedCustomer = null;
+        document.getElementById('customer-search').value = '';
+        document.getElementById('customer-clear').style.display = 'none';
+        document.getElementById('customer-dropdown').style.display = 'none';
+        document.getElementById('selected-customer').style.display = 'none';
+    }
+
+    updateCost();
+    document.getElementById('modal').classList.add('open');
 }
 
 // Closes the modal
@@ -701,59 +720,58 @@ let scannedOrderId = null;
 // BUT this one handles the TOPBAR scan input (scan-input), not the validation input
 
 async function handleQRScan(value) {
-  const qrValue = (value || '').trim();
-  if (!qrValue) return;
+    const qrValue = (value || '').trim();
+    if (!qrValue) return;
 
-  // Clear and hide the topbar scan input
-  const input = document.getElementById('scan-input');
-  if (input) input.value = '';
+    const input = document.getElementById('scan-input');
+    if (input) input.value = '';
 
-  if (!qrValue) return;
+    // Instant feedback so the admin sees a response the moment they
+    // scan, instead of a silent gap while Firebase round-trips happen
+    showToast('🔎', 'Looking up scanned code...');
 
-  try {
-    // ── Step 1: Try as Order QR first ────────────────────
-    // Order QR contains a Firebase orderId
-    const orderSnap = await db.ref(`orders/${qrValue}`).once('value');
-    const order = orderSnap.val();
+    try {
+        // Order lookups and customer lookups hit completely separate
+        // Firebase paths, so there's no need to wait for one before
+        // starting the other. Running them together removes a full
+        // network round-trip from every single scan.
+        const [orderSnap, customer] = await Promise.all([
+            db.ref(`orders/${qrValue}`).once('value'),
+            getCustomer(qrValue),
+        ]);
 
-    if (order) {
-      // It's an order QR — open the Order Scan Modal
-      openOrderScanModal(qrValue, order);
-      return;
+        const order = orderSnap.val();
+
+        if (order) {
+            openOrderScanModal(qrValue, order);
+            return;
+        }
+
+        if (!customer) {
+            showToast('⚠️', 'QR code not recognized.');
+            return;
+        }
+
+        if (customer.status !== 'approved') {
+            showToast('⚠️', `${customer.firstName} is not yet validated.`);
+            return;
+        }
+
+        // This lookup genuinely depends on the customer being valid
+        // first, so it can't be parallelized with the step above
+        const allOrders   = await getOrdersByUser(qrValue);
+        const readyOrders = allOrders.filter(o => o.status === 'ready');
+
+        if (readyOrders.length > 0) {
+            openPickupModal(qrValue, customer, readyOrders);
+        } else {
+            openNewOrderFromScan(qrValue, customer);
+        }
+
+    } catch (err) {
+        showToast('⚠️', 'Error reading QR. Try again.');
+        console.error(err);
     }
-
-    // ── Step 2: Try as Profile QR (userId) ───────────────
-    const customer = await getCustomer(qrValue);
-
-    if (!customer) {
-      showToast('⚠️', 'QR code not recognized.');
-      return;
-    }
-
-    if (customer.status !== 'approved') {
-      showToast('⚠️',
-        `${customer.firstName} is not yet validated.`);
-      return;
-    }
-
-    // ── Step 3: Check if this customer has READY orders ──
-    // If yes → show pickup modal
-    // If no  → open new order modal directly
-    const allOrders = await getOrdersByUser(qrValue);
-    const readyOrders = allOrders.filter(o => o.status === 'ready');
-
-    if (readyOrders.length > 0) {
-      // Customer has laundry ready — go straight to pickup
-      openPickupModal(qrValue, customer, readyOrders);
-    } else {
-      // No ready orders — go straight to new order
-      openNewOrderFromScan(qrValue, customer);
-    }
-
-  } catch (err) {
-    showToast('⚠️', 'Error reading QR. Try again.');
-    console.error(err);
-  }
 }
 
 // ── OPEN ORDER SCAN MODAL ────────────────────────────────────
@@ -1845,31 +1863,8 @@ function filterCustomerTable(q) {
 // Called when admin scans a profile QR and customer has no ready orders
 // Skips the profile modal and goes straight to New Order
 function openNewOrderFromScan(userId, customer) {
-  openModal();
-
-  selectedCustomer = {
-    id: userId,
-    firstName: customer.firstName,
-    lastName: customer.lastName,
-    contact1: customer.contact1 || '',
-    contact2: customer.contact2 || '',
-  };
-
-  // Fill the customer chip
-  document.getElementById('customer-clear').style.display = 'block';
-  document.getElementById('selected-avatar').textContent =
-    customer.firstName[0] + (customer.lastName[0] || '');
-  document.getElementById('selected-name').textContent =
-    `${customer.firstName} ${customer.lastName}`;
-  document.getElementById('selected-contact').textContent =
-    customer.contact1 +
-    (customer.contact2 ? ' · ' + customer.contact2 : '');
-  document.getElementById('selected-customer').style.display = 'flex';
-
-  updateCost();
-
-  showToast('✅',
-    `Customer loaded: ${customer.firstName} ${customer.lastName}`);
+    openModal({ id: userId, ...customer });
+    showToast('✅', `Customer loaded: ${customer.firstName} ${customer.lastName}`);
 }
 
 // ── PICKUP MODAL ─────────────────────────────────────────────

@@ -200,7 +200,9 @@ function listenToOrders(callback) {
 function listenToLiveWeight(callback) {
     db.ref('liveWeight').on('value', snapshot => {
         const data = snapshot.val();
-        if (data) callback(data.kg, data.updatedAt);
+        // Now also passes bridge.js's `active` flag through, so the
+        // frontend can visually distinguish "idle" from "weighing"
+        if (data) callback(data.kg, data.updatedAt, data.active);
     });
 }
 

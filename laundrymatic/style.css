@@ -2563,3 +2563,46 @@ select.form-input option {
 .form-input.invalid:focus {
   border-color: var(--danger);
 }
+
+/* ─── TOPBAR LIVE WEIGHT PILL ────────────────────────────── */
+/* Replaces the old removed scale-ring widget — small, always
+   visible on every page, no modal required to see it update */
+
+.live-weight-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+}
+
+.live-weight-pill-icon {
+  font-size: 0.85rem;
+}
+
+.live-weight-pill-value {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text);
+  min-width: 40px;
+}
+
+.live-weight-pill-unit {
+  color: var(--muted2);
+  font-size: 0.72rem;
+}
+
+/* Highlighted state — added by JS the moment weight crosses
+   the active threshold on the physical scale */
+.live-weight-pill.active {
+  border-color: var(--accent);
+  background: rgba(74, 244, 176, 0.08);
+}
+
+.live-weight-pill.active .live-weight-pill-value {
+  color: var(--accent);
+}

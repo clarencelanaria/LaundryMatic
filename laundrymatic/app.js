@@ -35,15 +35,6 @@ const READINGS = [
   { time: '10:44:43', w: 0.00, cust: '—' },
 ];
 
-// Notifications
-const NOTIFS = [
-  { type: 'green', text: "<strong>Order #LM-2041</strong> — Maria Santos's laundry is ready for pickup.", time: '2 min ago', unread: true },
-  { type: 'blue', text: '<strong>Sensor Update:</strong> Load cell calibrated. Drift corrected.', time: '15 min ago', unread: true },
-  { type: 'orange', text: "<strong>Order #LM-2036</strong> — Carlo Bautista's order is overdue.", time: '32 min ago', unread: true },
-  { type: 'green', text: "<strong>Order #LM-2039</strong> — Ana Reyes's laundry is ready for pickup.", time: '58 min ago', unread: true },
-  { type: 'grey', text: '<strong>System:</strong> Daily backup completed. 48 records archived.', time: '3 hrs ago', unread: false },
-];
-
 // Chart data for each time view
 
 // Step 24: Helper Functions
@@ -56,6 +47,20 @@ function initials(name) {
 // Same name always gets the same color
 function avatarColor(name) {
   return avatarColors[name.charCodeAt(0) % avatarColors.length];
+}
+
+// Converts an ISO timestamp into "2 min ago" style text,
+// matching the format the old sample notifications used
+function formatRelativeTime(isoString) {
+    if (!isoString) return '';
+    const diffMs  = Date.now() - new Date(isoString).getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1)  return 'just now';
+    if (diffMin < 60) return `${diffMin} min ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24)  return `${diffHr} hr${diffHr > 1 ? 's' : ''} ago`;
+    const diffDay = Math.floor(diffHr / 24);
+    return `${diffDay} day${diffDay > 1 ? 's' : ''} ago`;
 }
 
 // Calculates the service cost
@@ -174,32 +179,56 @@ function renderReadings() {
 }
 
 // Fills the transaction audit log on Records page
-function renderRecords() {
-  const el = document.getElementById('records-log');
-  if (!el) return;
+// Fills the transaction audit log on Records page — now driven by
+// real orders from Firebase instead of a hardcoded sample array.
+// One row per actual job order, using its current status —
+// this matches what "Transaction Records" should mean anyway,
+// since Firebase only stores current status, not a status-change
+// history. No data invention needed: the current schema already
+// has everything this panel requires.
+function renderRecords(orders) {
+    const el = document.getElementById('records-log');
+    if (!el) return;
 
-  const allRecords = [
-    { icon: 'ready', title: 'Order #LM-2041 Ready', meta: 'Maria Santos · 6.4 kg · Wash & Dry', time: '10:45 AM', weight: '6.40 kg' },
-    { icon: 'wash', title: 'Order #LM-2040 Started Washing', meta: 'Juan dela Cruz · 3.2 kg · Wash Only', time: '10:12 AM', weight: '3.20 kg' },
-    { icon: 'ready', title: 'Order #LM-2039 Ready', meta: 'Ana Reyes · 8.7 kg · Express', time: '09:58 AM', weight: '8.70 kg' },
-    { icon: 'pickup', title: 'Order #LM-2038 Picked Up', meta: 'Pedro Gomez · 5.1 kg', time: '09:30 AM', weight: '5.10 kg' },
-    { icon: 'wash', title: 'Order #LM-2037 Started Washing', meta: 'Rosa Lim · 4.6 kg · Wash & Dry', time: '09:10 AM', weight: '4.60 kg' },
-    { icon: 'ready', title: 'Order #LM-2035 Ready', meta: 'Liza Mendoza · 7.3 kg', time: '08:40 AM', weight: '7.30 kg' },
-    { icon: 'pickup', title: 'Order #LM-2033 Picked Up', meta: 'Grace Flores · 9.1 kg', time: '07:55 AM', weight: '9.10 kg' },
-  ];
+    if (!orders || orders.length === 0) {
+        el.innerHTML = `<div style="text-align:center;color:var(--muted2);padding:24px;font-size:0.82rem">No job orders yet.</div>`;
+        return;
+    }
 
-  const icons = { wash: '🌊', ready: '✅', pickup: '📦' };
+    const icons = {
+        pending:   '⏳',
+        washing:   '🌊',
+        ready:     '✅',
+        picked:    '📦',
+        cancelled: '✕',
+    };
+    const titles = {
+        pending:   'Order Received',
+        washing:   'Washing In Progress',
+        ready:     'Ready for Pickup',
+        picked:    'Picked Up',
+        cancelled: 'Cancelled',
+    };
+    const iconClass = {
+        pending:   'wash',
+        washing:   'wash',
+        ready:     'ready',
+        picked:    'pickup',
+        cancelled: 'pickup',
+    };
 
-  el.innerHTML = allRecords.map(r => `
-    <div class="record-item">
-      <div class="record-icon ${r.icon}">${icons[r.icon]}</div>
+    // Cap at 25 — this is an audit log, not the full order history,
+    // orders are already sorted newest-first by getAllOrders()
+    el.innerHTML = orders.slice(0, 25).map(o => `
+    <div class="record-item" onclick="viewOrderDetails('${o.id}')">
+      <div class="record-icon ${iconClass[o.status] || 'wash'}">${icons[o.status] || '🧾'}</div>
       <div class="record-body">
-        <div class="record-title">${r.title}</div>
-        <div class="record-meta">${r.meta}</div>
+        <div class="record-title">${o.transactionCode || 'Job Order'} — ${titles[o.status] || o.status}</div>
+        <div class="record-meta">${o.customerName || 'Unknown'} · ${(o.kg || 0).toFixed(1)} kg · ${o.service || '—'}</div>
       </div>
       <div class="record-right">
-        <div class="record-time">${r.time}</div>
-        <div class="record-weight">${r.weight}</div>
+        <div class="record-time">${o.timeIn || '—'}</div>
+        <div class="record-weight">${(o.kg || 0).toFixed(2)} kg</div>
       </div>
     </div>
   `).join('');
@@ -253,19 +282,48 @@ function renderTopCustomers(orders) {
 }
 
 // Fills the notifications feed
-function renderNotifications() {
-  const el = document.getElementById('notif-list');
-  if (!el) return;
+// Fills the notifications feed with real Firebase data — one
+// combined feed across every customer, newest first.
+function renderNotifications(notifications) {
+    const el = document.getElementById('notif-list');
+    if (!el) return;
 
-  el.innerHTML = NOTIFS.map(n => `
-    <div class="notif-item ${n.unread ? 'unread' : ''}">
-      <div class="notif-dot ${n.type}"></div>
-      <div>
-        <div class="notif-text">${n.text}</div>
-        <div class="notif-time">${n.time}</div>
+    if (!notifications || notifications.length === 0) {
+        el.innerHTML = `<div style="text-align:center;color:var(--muted2);padding:24px;font-size:0.82rem">No notifications yet.</div>`;
+        return;
+    }
+
+    el.innerHTML = notifications.map(n => {
+        // Notifications don't store a customer name directly — look
+        // it up from the already-cached orders list instead of an
+        // extra Firebase read
+        const relatedOrder = allOrdersCache.find(o => o.id === n.data?.orderId);
+        const customerName = relatedOrder ? relatedOrder.customerName : 'A customer';
+
+        const dotClass = n.data?.type === 'ready'    ? 'green'
+            : n.data?.type === 'received' ? 'blue'
+                : 'grey';
+
+        let text;
+        if (n.data?.type === 'ready') {
+            text = `<strong>${customerName}</strong>'s laundry is ready for pickup.`;
+        } else if (n.data?.type === 'received') {
+            const kgText = relatedOrder ? ` (${relatedOrder.kg.toFixed(1)} kg)` : '';
+            text = `<strong>${customerName}</strong>'s laundry was received${kgText}.`;
+        } else {
+            text = n.title || 'Notification';
+        }
+
+        return `
+      <div class="notif-item ${!n.read ? 'unread' : ''}">
+        <div class="notif-dot ${dotClass}"></div>
+        <div>
+          <div class="notif-text">${text}</div>
+          <div class="notif-time">${formatRelativeTime(n.createdAt)}</div>
+        </div>
       </div>
-    </div>
-  `).join('');
+    `;
+    }).join('');
 }
 
 // Builds the bar chart inside #chart-area
@@ -328,6 +386,7 @@ function showPage(page, el) {
 // Chart functions read from this instead of any hardcoded data
 let allOrdersCache  = [];
 let currentChartView = 'today';
+let allNotificationsCache = [];
 
 // Groups real orders into hourly/daily buckets depending on the view
 function computeOrderVolumeData(orders, view) {
@@ -552,51 +611,70 @@ function updateCost() {
 // ── UPDATE submitOrder() ──────────────────────────────────────
 // Replace your existing submitOrder() with this version
 
+// Prevents duplicate job orders from a double Enter press, a
+// double-click, or Enter and a click racing each other
+let isSubmittingOrder = false;
+
 async function submitOrder() {
-  // Validate customer is selected
-  if (!selectedCustomer) {
-    showToast('⚠️', 'Please select a customer first.');
-    return;
-  }
+    if (isSubmittingOrder) return; // already in flight — ignore this trigger
 
-  // Validate weight
-  const w = getActiveWeight();
-  if (!w || w <= 0) {
-    showToast('⚠️', 'Please enter a valid weight.');
-    return;
-  }
-  if (w < minWeightKg) {
-      showToast('⚠️', `Minimum ${minWeightKg} kg required per transaction.`);
-      return;
-  }
+    if (!selectedCustomer) {
+        showToast('⚠️', 'Please select a customer first.');
+        return;
+    }
 
-  const s = document.getElementById('form-service').value;
-  const notes = document.getElementById('form-notes').value.trim();
+    const w = getActiveWeight();
+    if (!w || w <= 0) {
+        showToast('⚠️', 'Please enter a valid weight.');
+        return;
+    }
+    if (w < minWeightKg) {
+        showToast('⚠️', `Minimum ${minWeightKg} kg required per transaction.`);
+        return;
+    }
 
-  try {
-    const orderId = await createOrder(selectedCustomer.id, {
-      customerName: `${selectedCustomer.firstName} ${selectedCustomer.lastName}`,
-      kg: w,
-      amount: cost(w),
-      service: s,
-      notes: notes,
-    });
+    isSubmittingOrder = true;
 
-    // Get the full order data from Firebase to pass to the receipt
-    const savedOrder = await db.ref(`orders/${orderId}`).once('value');
-    const orderData = savedOrder.val();
+    // Lock the button visually too — belt and suspenders against
+    // a rapid double-click slipping through before the flag above
+    // has fully taken effect
+    const submitBtn = document.querySelector('#modal .modal-footer .btn-primary');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creating...';
+    }
 
-    showToast('✅', `Order created for ${selectedCustomer.firstName}.`);
-    closeModal();
-    loadOrders();
+    const s = document.getElementById('form-service').value;
+    const notes = document.getElementById('form-notes').value.trim();
 
-    // Show receipt modal with full order data + customer info
-    showReceiptModal(orderData, selectedCustomer);
+    try {
+        const orderId = await createOrder(selectedCustomer.id, {
+            customerName: `${selectedCustomer.firstName} ${selectedCustomer.lastName}`,
+            kg: w,
+            amount: cost(w),
+            service: s,
+            notes: notes,
+        });
 
-  } catch (err) {
-    showToast('⚠️', 'Error creating order.');
-    console.error(err);
-  }
+        const savedOrder = await db.ref(`orders/${orderId}`).once('value');
+        const orderData = savedOrder.val();
+
+        showToast('✅', `Order created for ${selectedCustomer.firstName}.`);
+        closeModal();
+        loadOrders();
+
+        showReceiptModal(orderData, selectedCustomer);
+
+    } catch (err) {
+        showToast('⚠️', 'Error creating order.');
+        console.error(err);
+    } finally {
+        isSubmittingOrder = false;
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Create Job Order';
+        }
+    }
 }
 //Step 30: Toast, Filter, and Other Actions
 // Shows a brief notification at the bottom-right for 3 seconds
@@ -627,11 +705,26 @@ function tare() {
 }
 
 // Marks all notifications as read
-function markAllRead() {
-  NOTIFS.forEach(n => n.unread = false);
-  renderNotifications();
-  document.getElementById('notif-badge').textContent = '0';
-  showToast('🔔', 'All notifications marked as read.');
+// Marks all currently-unread notifications as read in Firebase.
+// No manual re-render needed afterward — the live listener will
+// automatically fire again with the updated read states.
+async function markAllRead() {
+    const unread = allNotificationsCache.filter(n => !n.read);
+
+    if (unread.length === 0) {
+        showToast('🔔', 'No unread notifications.');
+        return;
+    }
+
+    try {
+        await Promise.all(
+            unread.map(n => markNotificationRead(n.userId, n.notifId))
+        );
+        showToast('🔔', 'All notifications marked as read.');
+    } catch (err) {
+        showToast('⚠️', 'Error marking notifications as read.');
+        console.error(err);
+    }
 }
 
 // Advances an order through its status lifecycle
@@ -1034,6 +1127,7 @@ async function loadOrders() {
     updateDashboardKPIs(orders);
     updateStatusOverview(orders);
     renderTopCustomers(orders);
+    renderRecords(orders);
     renderDashboardChart(currentChartView);
 }
 
@@ -1862,9 +1956,24 @@ function filterCustomerTable(q) {
 
 // Called when admin scans a profile QR and customer has no ready orders
 // Skips the profile modal and goes straight to New Order
+// Flip this to true for fully automatic submission the instant a
+// customer QR is scanned — no Enter, no click, nothing. Understand
+// the tradeoff: there is no human checkpoint left. A mis-scan or an
+// unsettled scale reading becomes uncatchable before money changes
+// hands. Off by default for that reason.
+const AUTO_SUBMIT_ON_SCAN = true;
+
 function openNewOrderFromScan(userId, customer) {
     openModal({ id: userId, ...customer });
     showToast('✅', `Customer loaded: ${customer.firstName} ${customer.lastName}`);
+
+    if (AUTO_SUBMIT_ON_SCAN) {
+        // Small delay lets the live weight reading settle before
+        // it gets locked into the order
+        setTimeout(() => {
+            if (selectedCustomer && !isSubmittingOrder) submitOrder();
+        }, 600);
+    }
 }
 
 // ── PICKUP MODAL ─────────────────────────────────────────────
@@ -2237,9 +2346,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadPendingCustomers();
   renderWeightHistory();
   renderReadings();
-  renderRecords();
-  renderCustomerStats();
-  renderNotifications();
 
   startLiveWeight();
 
@@ -2264,7 +2370,22 @@ window.addEventListener('DOMContentLoaded', async () => {
         updateDashboardKPIs(orders);
         updateStatusOverview(orders);
         renderTopCustomers(orders);
+        renderRecords(orders);
         renderDashboardChart(currentChartView);
+    });
+
+    // Live notifications feed — attached once, here, alongside the
+    // orders listener. Fires immediately with current data on
+    // attach, then again on every future change — same pattern as
+    // listenToOrders, so there's no separate "initial load" call
+    // needed and no risk of a duplicate listener being attached.
+    listenToAllNotifications(notifications => {
+        allNotificationsCache = notifications;
+        renderNotifications(notifications);
+
+        const unreadCount = notifications.filter(n => !n.read).length;
+        const badge = document.getElementById('notif-badge');
+        if (badge) badge.textContent = unreadCount;
     });
 
   // Modal events — same as before
@@ -2321,6 +2442,26 @@ window.addEventListener('DOMContentLoaded', async () => {
         // and button-activation keys (Space/Enter) completely alone
         if (e.key.length === 1) {
             input.focus();
+        }
+    });
+
+    // ── SCANNER-FRIENDLY WORKFLOW — Enter submits, Escape cancels ──
+// While the New Job Order modal is open AND a customer is already
+// selected, Enter submits immediately — no mouse required. The
+// selectedCustomer check is a safety net: it stops a stray Enter
+// from submitting a blank order if the modal was opened manually
+// and no customer has been chosen yet.
+    document.addEventListener('keydown', function (e) {
+        const modal = document.getElementById('modal');
+        if (!modal || !modal.classList.contains('open')) return;
+
+        if (e.key === 'Enter' && selectedCustomer && !isSubmittingOrder) {
+            e.preventDefault();
+            submitOrder();
+        }
+
+        if (e.key === 'Escape') {
+            closeModal();
         }
     });
 });

@@ -206,6 +206,39 @@ function listenToLiveWeight(callback) {
     });
 }
 
+// ── ADMIN NOTIFICATIONS FEED ─────────────────────────────────
+// /notifications/{userId}/{pushId} already exists — written by
+// sendNotificationToUser() whenever an order is received or
+// becomes ready. This reads the /notifications ROOT (all
+// customers at once) in a single listener, then flattens it
+// into one combined, time-sorted feed for the admin dashboard.
+// No new Firebase paths — this only aggregates data that's
+// already being written for the mobile app's own notifications.
+
+function listenToAllNotifications(callback) {
+    db.ref('notifications').on('value', snapshot => {
+        const data = snapshot.val();
+        if (!data) { callback([]); return; }
+
+        const flat = [];
+        Object.entries(data).forEach(([userId, userNotifs]) => {
+            Object.entries(userNotifs).forEach(([notifId, notif]) => {
+                flat.push({ userId, notifId, ...notif });
+            });
+        });
+
+        flat.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        callback(flat);
+    }, err => {
+        console.error('Error listening to notifications:', err);
+    });
+}
+
+// Marks one notification as read at its exact Firebase path
+async function markNotificationRead(userId, notifId) {
+    await db.ref(`notifications/${userId}/${notifId}`).update({ read: true });
+}
+
 // ── CUSTOMER VALIDATION ──────────────────────────────────────
 
 // Gets all customers with status = 'pending' (not yet validated)

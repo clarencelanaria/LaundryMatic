@@ -67,29 +67,47 @@ port.on('error', err => {
 
 // ── MAIN DATA HANDLER ──────────────────────────────────────────
 
+// ── HELPER: extract a weight value from ANY line the Arduino sends ──
+// Handles two cases:
+//   1. Proper JSON:  {"weight": 1.38}   ← what the sketch SHOULD send
+//   2. Plain text:   "1.38 kg"          ← what it's currently sending
+// Returns a number, or null if the line isn't a weight reading at all
+// (startup banners, calibration prompts, etc.)
+function extractWeight(raw) {
+  // Case 1 — JSON format
+  if (raw.startsWith('{')) {
+    try {
+      const data = JSON.parse(raw);
+      if (data.error || data.weight === null || data.weight === undefined) {
+        return null;
+      }
+      return data.weight;
+    } catch {
+      return null; // malformed JSON
+    }
+  }
+
+  // Case 2 — Plain text fallback: grabs the first number-looking
+  // substring in the line, e.g. "0.01 kg" → 0.01
+  const match = raw.match(/-?\d+\.?\d*/);
+  return match ? parseFloat(match[0]) : null;
+}
+
+// ── MAIN DATA HANDLER — now tolerant of both formats ─────────────
 parser.on('data', async line => {
   const raw = line.trim();
+  if (!raw) return;
 
-  // Skip non-JSON startup messages from Arduino
-  if (!raw.startsWith('{')) {
+  const weight = extractWeight(raw);
+
+  if (weight === null || Number.isNaN(weight)) {
+    // Genuinely not a weight reading — log and move on, don't crash
     console.log('Arduino:', raw);
     return;
   }
 
-  let data;
-  try {
-    data = JSON.parse(raw);
-  } catch {
-    return; // skip malformed lines
-  }
-
-  if (data.error || data.weight === null || data.weight === undefined) {
-    return;
-  }
-
-  const weight    = data.weight;
-  const now       = Date.now();
-  const isActive  = weight >= WEIGHT_THRESHOLD;
+  const now      = Date.now();
+  const isActive = weight >= WEIGHT_THRESHOLD;
 
   // ── Always update /liveWeight (just one record, no history) ──
   // Throttle to avoid hammering Firebase every 500ms
@@ -118,7 +136,6 @@ parser.on('data', async line => {
     scaleActive = false;
     console.log('⚪ Scale back to idle');
 
-    // Clear any pending stable timer
     if (stableTimer) {
       clearTimeout(stableTimer);
       stableTimer = null;

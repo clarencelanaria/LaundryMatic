@@ -615,6 +615,8 @@ function updateCost() {
 // double-click, or Enter and a click racing each other
 let isSubmittingOrder = false;
 
+let isProcessingScan = false;
+
 async function submitOrder() {
     if (isSubmittingOrder) return; // already in flight — ignore this trigger
 
@@ -663,7 +665,7 @@ async function submitOrder() {
         closeModal();
         loadOrders();
 
-        showReceiptModal(orderData, selectedCustomer);
+        autoPrintReceipt(orderData, selectedCustomer);
 
     } catch (err) {
         showToast('⚠️', 'Error creating order.');
@@ -815,19 +817,15 @@ let scannedOrderId = null;
 async function handleQRScan(value) {
     const qrValue = (value || '').trim();
     if (!qrValue) return;
+    if (isProcessingScan) return;
+    isProcessingScan = true;
 
     const input = document.getElementById('scan-input');
     if (input) input.value = '';
 
-    // Instant feedback so the admin sees a response the moment they
-    // scan, instead of a silent gap while Firebase round-trips happen
     showToast('🔎', 'Looking up scanned code...');
 
     try {
-        // Order lookups and customer lookups hit completely separate
-        // Firebase paths, so there's no need to wait for one before
-        // starting the other. Running them together removes a full
-        // network round-trip from every single scan.
         const [orderSnap, customer] = await Promise.all([
             db.ref(`orders/${qrValue}`).once('value'),
             getCustomer(qrValue),
@@ -850,13 +848,14 @@ async function handleQRScan(value) {
             return;
         }
 
-        // This lookup genuinely depends on the customer being valid
-        // first, so it can't be parallelized with the step above
-        const allOrders   = await getOrdersByUser(qrValue);
-        const readyOrders = allOrders.filter(o => o.status === 'ready');
+        const allOrders    = await getOrdersByUser(qrValue);
+        const readyOrders  = allOrders.filter(o => o.status === 'ready');
+        const activeOrders = allOrders.filter(o => o.status === 'pending' || o.status === 'washing');
 
         if (readyOrders.length > 0) {
             openPickupModal(qrValue, customer, readyOrders);
+        } else if (activeOrders.length > 0) {
+            showActiveOrderNotice(customer, activeOrders[0]);
         } else {
             openNewOrderFromScan(qrValue, customer);
         }
@@ -864,7 +863,14 @@ async function handleQRScan(value) {
     } catch (err) {
         showToast('⚠️', 'Error reading QR. Try again.');
         console.error(err);
+    } finally {
+        isProcessingScan = false;
     }
+}
+
+function showActiveOrderNotice(customer, order) {
+    showToast('ℹ️', `${customer.firstName} already has an active order (${STATUS_LABELS[order.status] || order.status}).`);
+    openOrderScanModal(order.id, order);
 }
 
 // ── OPEN ORDER SCAN MODAL ────────────────────────────────────
@@ -1598,69 +1604,58 @@ let currentReceipt = null;
  * @param {object} order  — the full order object returned from Firebase
  * @param {object} customer — the selectedCustomer object
  */
-function showReceiptModal(order, customer) {
-  currentReceipt = { order, customer };
+function populateReceiptFields(order, customer) {
+    currentReceipt = { order, customer };
 
-  // ── Fill text fields ──────────────────────────────────────
-
-  document.getElementById('r-txn-code').textContent =
-    order.transactionCode || '—';
-
-  document.getElementById('r-date').textContent =
-    order.dateIn || new Date().toLocaleDateString('en-PH');
-
-  document.getElementById('r-time').textContent =
-    order.timeIn || new Date().toLocaleTimeString('en-PH', {
-      hour: '2-digit', minute: '2-digit'
-    });
-
-  document.getElementById('r-customer').textContent =
-    order.customerName || '—';
-
-  document.getElementById('r-contact').textContent =
-    customer.contact1 +
-    (customer.contact2 ? ' / ' + customer.contact2 : '');
-
-  document.getElementById('r-service').textContent =
-    order.service || '—';
-
-  document.getElementById('r-weight').textContent =
-    (order.kg || 0).toFixed(2) + ' kg';
-
-  document.getElementById('r-amount').textContent =
-    '₱' + Math.round(order.amount || 0);
-
-  document.getElementById('r-finish-time').textContent =
-    order.estimatedFinishTime || '—';
-
-  document.getElementById('r-finish-date').textContent =
-    order.estimatedFinishDate || '—';
-
-  document.getElementById('r-duration').textContent =
-    order.estimatedHours
-      ? order.estimatedHours + ' hours'
-      : '—';
-
-  // ── Generate Order QR (specific order) ───────────────────
-
-    // ── Generate Job Order QR ─────────────────────────────────
-// Larger now that it's the only QR on the receipt —
-// full width means it can afford more modules-per-inch clarity
+    document.getElementById('r-txn-code').textContent = order.transactionCode || '—';
+    document.getElementById('r-date').textContent = order.dateIn || new Date().toLocaleDateString('en-PH');
+    document.getElementById('r-time').textContent = order.timeIn || new Date().toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('r-customer').textContent = order.customerName || '—';
+    document.getElementById('r-contact').textContent = customer.contact1 + (customer.contact2 ? ' / ' + customer.contact2 : '');
+    document.getElementById('r-service').textContent = order.service || '—';
+    document.getElementById('r-weight').textContent = (order.kg || 0).toFixed(2) + ' kg';
+    document.getElementById('r-amount').textContent = '₱' + Math.round(order.amount || 0);
+    document.getElementById('r-finish-time').textContent = order.estimatedFinishTime || '—';
+    document.getElementById('r-finish-date').textContent = order.estimatedFinishDate || '—';
+    document.getElementById('r-duration').textContent = order.estimatedHours ? order.estimatedHours + ' hours' : '—';
 
     const orderQRBox = document.getElementById('r-order-qr');
     orderQRBox.innerHTML = '';
-
     new QRCode(orderQRBox, {
-        text:         order.orderId,
-        width:        160,
-        height:       160,
-        colorDark:    '#000000',
-        colorLight:   '#ffffff',
+        text: order.orderId, width: 160, height: 160,
+        colorDark: '#000000', colorLight: '#ffffff',
         correctLevel: QRCode.CorrectLevel.H,
     });
+}
 
-  // ── Open the modal ────────────────────────────────────────
-  document.getElementById('receipt-modal').classList.add('open');
+function showReceiptModal(order, customer) {
+    populateReceiptFields(order, customer);
+    document.getElementById('receipt-modal').classList.add('open');
+}
+
+function autoPrintReceipt(order, customer) {
+    populateReceiptFields(order, customer);
+
+    const receiptCard = document.getElementById('receipt-card');
+    const printArea = document.getElementById('print-receipt-area');
+    printArea.innerHTML = receiptCard.outerHTML;
+
+    setTimeout(() => {
+        window.print();
+        returnToScanReadyState();
+    }, 300);
+}
+
+function returnToScanReadyState() {
+    closeModal();
+    closeReceiptModal();
+    selectedCustomer = null;
+
+    const scanInput = document.getElementById('scan-input');
+    if (scanInput) {
+        scanInput.value = '';
+        scanInput.focus();
+    }
 }
 
 function closeReceiptModal() {

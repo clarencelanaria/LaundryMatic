@@ -1828,6 +1828,10 @@ select.form-input option {
 }
 
 /* ─── PRINT QR CARD — only visible when printing ────────── */
+#print-receipt-area {
+  display: none;
+}
+
 @media print {
   body>* {
     display: none !important;

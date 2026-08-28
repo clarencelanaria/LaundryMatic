@@ -12,22 +12,20 @@
    ─────────────────────────────────────────────────────────── */
 
 /* ─── HELPERS ────────────────────────────────────────────────*/
+function checkAuthState() {
+    const onAuthPage = window.location.pathname.includes('index')
+        || window.location.pathname.includes('register');
 
-// Returns the users array from storage, or an empty array
-function getUsers() {
-    const data = localStorage.getItem('lm_users');
-    return data ? JSON.parse(data) : [];
+    auth.onAuthStateChanged(user => {
+        if (user && onAuthPage) {
+            window.location.href = 'dashboard.html';
+        }
+        if (!user && !onAuthPage) {
+            window.location.href = 'index.html';
+        }
+    });
 }
-
-// Saves the users array back to storage
-function saveUsers(users) {
-    localStorage.setItem('lm_users', JSON.stringify(users));
-}
-
-// Finds one user by username (case-insensitive)
-function findUser(username) {
-    return getUsers().find(u => u.username.toLowerCase() === username.toLowerCase());
-}
+checkAuthState();
 
 // Shows an error box with a message
 // boxId = the id of the .auth-error div
@@ -51,13 +49,19 @@ function hideError(boxId) {
 function togglePassword(inputId, btnEl) {
     const input = document.getElementById(inputId);
     if (!input) return;
-    if (input.type === 'password') {
-        input.type = 'text';
-        btnEl.textContent = '🙈';  // closed eye = now visible
-    } else {
-        input.type = 'password';
-        btnEl.textContent = '👁';   // open eye = now hidden
-    }
+
+    const nowShowing = input.type === 'password'; // about to reveal it
+    input.type = nowShowing ? 'text' : 'password';
+
+    // Swap the icon: 'eye' when hidden (click to reveal),
+    // 'eye-off' when visible (click to hide again)
+    const iconName = nowShowing ? 'eye-off' : 'eye';
+    btnEl.innerHTML = `<i data-lucide="${iconName}"></i>`;
+
+    // Lucide only turns <i data-lucide="..."> tags into real icons
+    // once — this re-scans the page so the new tag we just inserted
+    // actually gets drawn
+    lucide.createIcons();
 }
 
 /* ─── PAGE GUARD ─────────────────────────────────────────────
@@ -67,89 +71,65 @@ function togglePassword(inputId, btnEl) {
    On the dashboard: if nobody is logged in, redirect to login.
    ─────────────────────────────────────────────────────────── */
 
-function checkAuthState() {
-    const currentUser = localStorage.getItem('lm_current_user');
-    const onAuthPage = window.location.pathname.includes('index')
-        || window.location.pathname.includes('register');
 
-    if (currentUser && onAuthPage) {
-        // Already logged in — no need to be on login/register
-        window.location.href = 'dashboard.html';
-    }
-
-    if (!currentUser && !onAuthPage) {
-        // Not logged in — send to login
-        window.location.href = 'index.html';
-    }
-}
-
-// Run the guard immediately when the script loads
-checkAuthState();
 
 /* ─── SEED DATA ──────────────────────────────────────────────
    Creates a default admin account the first time the app runs,
    so there's always something to log in with.
    ─────────────────────────────────────────────────────────── */
 
-(function seedDefaultUser() {
-    if (getUsers().length === 0) {
-        saveUsers([{
-            username: 'admin',
-            password: 'admin123',
-            firstName: 'Admin',
-            lastName: 'User',
-            question: 'What is your favorite food?',
-            answer: 'laundry',
-        }]);
-    }
-})();
 
 /* ─── LOGIN ──────────────────────────────────────────────────*/
 
-function handleLogin() {
-    const username = document.getElementById('login-username').value.trim();
+async function handleLogin() {
+    const email = document.getElementById('login-username').value.trim();
     const password = document.getElementById('login-password').value;
     const remember = document.getElementById('remember-me').checked;
 
-    // Clear any previous error
     hideError('login-error');
 
-    // Validate fields are not empty
-    if (!username || !password) {
-        showError('login-error', 'login-error-msg', 'Please enter your username and password.');
+    if (!email || !password) {
+        showError('login-error', 'login-error-msg', 'Please enter your email and password.');
         return;
     }
 
-    // Look up the user
-    const user = findUser(username);
+    try {
+        // Checked = stay logged in after closing the browser.
+        // Unchecked = logged out once the browser/tab is closed.
+        const persistence = remember
+            ? firebase.auth.Auth.Persistence.LOCAL
+            : firebase.auth.Auth.Persistence.SESSION;
+        await auth.setPersistence(persistence);
 
-    // Wrong username or password — same message for both (security best practice)
-    if (!user || user.password !== password) {
-        showError('login-error', 'login-error-msg', 'Invalid username or password.');
-        return;
+        await auth.signInWithEmailAndPassword(email, password);
+
+        // Pre-fill the email field next time, only if "remember me" was checked
+        if (remember) {
+            localStorage.setItem('lm_remembered', email);
+        } else {
+            localStorage.removeItem('lm_remembered');
+        }
+
+        window.location.href = 'dashboard.html';
+    } catch (err) {
+        showError('login-error', 'login-error-msg', 'Invalid email or password.');
     }
+}
 
-    // Success — save session
-    localStorage.setItem('lm_current_user', user.username);
+/* ─── LOGOUT ─────────────────────────────────────────────────*/
 
-    // If "Remember me" is checked, also save to a separate key so
-    // the login page can pre-fill username next time
-    if (remember) {
-        localStorage.setItem('lm_remembered', user.username);
-    } else {
-        localStorage.removeItem('lm_remembered');
-    }
-
-    // Go to dashboard
-    window.location.href = 'dashboard.html';
+function handleLogout() {
+    auth.signOut().then(() => {
+        window.location.href = 'index.html';
+    });
 }
 
 /* ─── REGISTER ───────────────────────────────────────────────*/
 
-function handleRegister() {
+async function handleRegister() {
     const firstName = document.getElementById('reg-firstname').value.trim();
     const lastName = document.getElementById('reg-lastname').value.trim();
-    const username = document.getElementById('reg-username').value.trim();
+    const email = document.getElementById('reg-username').value.trim(); // now expects an email
     const password = document.getElementById('reg-password').value;
     const confirm = document.getElementById('reg-confirm').value;
     const question = document.getElementById('reg-question').value;
@@ -157,56 +137,40 @@ function handleRegister() {
 
     hideError('register-error');
 
-    // Validate all fields are filled
-    if (!firstName || !lastName || !username || !password || !confirm || !question || !answer) {
+    if (!firstName || !lastName || !email || !password || !confirm || !question || !answer) {
         showError('register-error', 'register-error-msg', 'Please fill in all fields.');
         return;
     }
 
-    // Password length check
     if (password.length < 6) {
         showError('register-error', 'register-error-msg', 'Password must be at least 6 characters.');
         return;
     }
 
-    // Passwords must match
     if (password !== confirm) {
         showError('register-error', 'register-error-msg', 'Passwords do not match.');
         return;
     }
 
-    // Username must not already exist
-    if (findUser(username)) {
-        showError('register-error', 'register-error-msg', 'That username is already taken.');
-        return;
+    try {
+        const cred = await auth.createUserWithEmailAndPassword(email, password);
+        await db.ref('admins/' + cred.user.uid).set({ firstName, lastName, email });
+        window.location.href = 'dashboard.html';
+    } catch (err) {
+        showError('register-error', 'register-error-msg', err.message);
     }
-
-    // All good — create the new user
-    const users = getUsers();
-    users.push({ username, password, firstName, lastName, question, answer });
-    saveUsers(users);
-
-    // Log them in immediately after registering
-    localStorage.setItem('lm_current_user', username);
-    window.location.href = 'dashboard.html';
 }
 
 /* ─── FORGOT PASSWORD MODAL ──────────────────────────────────
-   Two-step flow:
-   Step 1 — user enters username → we show their security question
-   Step 2 — user answers + enters new password → we update it
+   Single step: user enters their email, Firebase sends them
+   a reset link. Firebase handles verifying identity and
+   actually changing the password on its own hosted page —
+   we never see or touch the new password.
    ─────────────────────────────────────────────────────────── */
 
-let resetStep = 1;   // tracks which step the modal is on
-let resetUser = null; // holds the found user object
-
 function showForgotPassword() {
-    resetStep = 1;
-    resetUser = null;
     hideError('reset-error');
-    document.getElementById('reset-username').value = '';
-    document.getElementById('security-question-wrap').style.display = 'none';
-    document.getElementById('reset-btn').textContent = 'Find Account';
+    document.getElementById('reset-email').value = '';
     document.getElementById('forgot-modal').classList.add('open');
 }
 
@@ -214,71 +178,32 @@ function closeForgotPassword() {
     document.getElementById('forgot-modal').classList.remove('open');
 }
 
-function handleReset() {
+async function handleReset() {
     hideError('reset-error');
 
-    if (resetStep === 1) {
-        // Step 1: find the user by username
-        const username = document.getElementById('reset-username').value.trim();
+    const email = document.getElementById('reset-email').value.trim();
 
-        if (!username) {
-            showError('reset-error', 'reset-error-msg', 'Please enter your username.');
-            return;
-        }
+    if (!email) {
+        showError('reset-error', 'reset-error-msg', 'Please enter your email.');
+        return;
+    }
 
-        const user = findUser(username);
-
-        if (!user) {
-            showError('reset-error', 'reset-error-msg', 'No account found with that username.');
-            return;
-        }
-
-        // Found — show their security question
-        resetUser = user;
-        document.getElementById('security-question-text').textContent = user.question;
-        document.getElementById('security-question-wrap').style.display = 'block';
-        document.getElementById('reset-btn').textContent = 'Reset Password';
-        resetStep = 2;
-
-    } else {
-        // Step 2: verify answer and set new password
-        const answer = document.getElementById('security-answer').value.trim();
-        const newPass = document.getElementById('new-password').value;
-
-        if (!answer || !newPass) {
-            showError('reset-error', 'reset-error-msg', 'Please fill in all fields.');
-            return;
-        }
-
-        if (answer !== resetUser.answer) {
-            showError('reset-error', 'reset-error-msg', 'Incorrect answer. Try again.');
-            return;
-        }
-
-        if (newPass.length < 6) {
-            showError('reset-error', 'reset-error-msg', 'New password must be at least 6 characters.');
-            return;
-        }
-
-        // Update the password in storage
-        const users = getUsers();
-        const index = users.findIndex(u => u.username === resetUser.username);
-        users[index].password = newPass;
-        saveUsers(users);
-
+    try {
+        await auth.sendPasswordResetEmail(email);
         closeForgotPassword();
 
-        // Show a quick confirmation on the login page
-        // We reuse the error box but style it green inline
+        // Reuse the login error box, styled green, as a confirmation
         const box = document.getElementById('login-error');
         const msg = document.getElementById('login-error-msg');
         if (box && msg) {
-            msg.textContent = 'Password reset successful. You can now log in.';
+            msg.textContent = 'Password reset email sent. Check your inbox.';
             box.style.display = 'flex';
             box.style.background = 'rgba(74, 244, 176, 0.08)';
             box.style.borderColor = 'rgba(74, 244, 176, 0.25)';
             box.style.color = 'var(--accent)';
         }
+    } catch (err) {
+        showError('reset-error', 'reset-error-msg', 'Could not send reset email. Check the address and try again.');
     }
 }
 

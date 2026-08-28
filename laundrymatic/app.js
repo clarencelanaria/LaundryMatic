@@ -1,6 +1,28 @@
 // Step 23: Your Data
 // Start with the raw data your app works with. In a real project, this data comes from a database via an API. For now it's hardcoded.
 // Color palette for customer avatars — assigned by name
+// ── LUCIDE ICON HELPER ──────────────────────────────────────
+// Returns a placeholder tag for a Lucide icon — use this anywhere
+// you'd have typed an emoji, inside any template string.
+// Usage:  icon('check-circle-2')                → default 16px, inherits text color
+//         icon('package', 20)                   → custom size
+//         icon('x', 14, 'text-muted')           → custom size + extra class
+//
+// IMPORTANT: after inserting HTML that contains icon() placeholders
+// into the DOM (via innerHTML =, template literals, etc.), you MUST
+// call renderIcons() afterward or the placeholders stay as empty
+// <i> tags and nothing will be visible.
+function icon(name, size = 16, extraClass = '') {
+    return `<i data-lucide="${name}" style="--icon-size:${size}px" class="${extraClass}"></i>`;
+}
+
+// Activates every un-rendered icon() placeholder currently in the
+// DOM. Call this once after any innerHTML update that used icon().
+// Safe to call as often as needed — Lucide skips icons already
+// rendered, so this never double-processes anything.
+function renderIcons() {
+    if (window.lucide) lucide.createIcons();
+}
 const avatarColors = ['#4af4b0', '#4a9ff4', '#f4a24a', '#a24af4', '#f44a9f', '#f4f44a'];
 
 // All laundry orders
@@ -11,8 +33,8 @@ const ORDERS = [
   { id: '#LM-2044', customer: 'Jeremy Landar', weight: 5.1, service: 'Fold & Fresh', status: 'picked', time: '09:38 AM' },
 ];
 
-// Price per kilogram
-const RATE = 65;
+// Price per kilogram — overwritten by Firebase settings on load
+let RATE = 65;
 
 // IoT sensor weight readings history
 const HISTORY = [
@@ -64,12 +86,14 @@ function formatRelativeTime(isoString) {
 }
 
 // Calculates the service cost
-// Express gets +30%, minimum charge is ₱50
+// minimum charge is ₱75
 // Simplified after scoping the system to Wash & Dry only —
 // no more service-type multiplier needed
+let MIN_CHARGE = 75.00; // overwritten by Firebase settings on load
+
 function cost(w) {
     const r = w * RATE;
-    return Math.max(r, 50);
+    return Math.max(r, MIN_CHARGE);
 }
 
 // Builds the HTML string for a colored status badge
@@ -136,11 +160,13 @@ function renderOrders(target, data) {
       </td>
       <td><span class="weight-cell">${o.weight.toFixed(1)} kg</span></td>
       <td><span style="font-size:0.8rem;color:var(--muted2)">${o.service}</span></td>
-      <td><span class="cost-cell">₱${cost(o.weight).toFixed(0)}</span></td>
+      <td><span class="cost-cell">₱${cost(o.weight).toFixed(2)}</span></td>
       <td>${statusBadge(o.status)}</td>
       <td><span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--muted2)">${o.time}</span></td>
     </tr>
   `).join('');
+
+    renderIcons();
 }
 
 // Fills the weight history table on the Weight Monitor page
@@ -156,9 +182,11 @@ function renderWeightHistory() {
       <td><span class="weight-cell">${h.raw.toFixed(2)}</span></td>
       <td style="color:var(--muted2);font-family:var(--font-mono)">${h.tare.toFixed(2)}</td>
       <td><span class="weight-cell" style="color:var(--accent)">${(h.raw - h.tare).toFixed(2)}</span></td>
-      <td><span class="cost-cell">₱${(h.raw * RATE).toFixed(0)}</span></td>
+      <td><span class="cost-cell">₱${(h.raw * RATE).toFixed(2)}</span></td>
     </tr>
   `).join('');
+
+    renderIcons();
 }
 
 // Fills the live readings log with mini bar rows
@@ -176,6 +204,7 @@ function renderReadings() {
       <div class="reading-customer">${r.cust}</div>
     </div>
   `).join('');
+    renderIcons();
 }
 
 // Fills the transaction audit log on Records page
@@ -196,11 +225,11 @@ function renderRecords(orders) {
     }
 
     const icons = {
-        pending:   '⏳',
-        washing:   '🌊',
-        ready:     '✅',
-        picked:    '📦',
-        cancelled: '✕',
+        pending:   'hourglass',
+        washing:   'refresh-cw',
+        ready:     'check-circle-2',
+        picked:    'package',
+        cancelled: 'x-circle',
     };
     const titles = {
         pending:   'Order Received',
@@ -221,7 +250,7 @@ function renderRecords(orders) {
     // orders are already sorted newest-first by getAllOrders()
     el.innerHTML = orders.slice(0, 25).map(o => `
     <div class="record-item" onclick="viewOrderDetails('${o.id}')">
-      <div class="record-icon ${iconClass[o.status] || 'wash'}">${icons[o.status] || '🧾'}</div>
+            <div class="record-icon ${iconClass[o.status] || 'wash'}">${icon(icons[o.status] || 'receipt', 16)}</div>
       <div class="record-body">
         <div class="record-title">${o.transactionCode || 'Job Order'} — ${titles[o.status] || o.status}</div>
         <div class="record-meta">${o.customerName || 'Unknown'} · ${(o.kg || 0).toFixed(1)} kg · ${o.service || '—'}</div>
@@ -232,6 +261,7 @@ function renderRecords(orders) {
       </div>
     </div>
   `).join('');
+    renderIcons();
 }
 
 // Fills the customer leaderboard on Records page
@@ -279,6 +309,7 @@ function renderTopCustomers(orders) {
       </div>
     </div>
   `).join('');
+    renderIcons();
 }
 
 // Fills the notifications feed
@@ -324,6 +355,7 @@ function renderNotifications(notifications) {
       </div>
     `;
     }).join('');
+    renderIcons();
 }
 
 // Builds the bar chart inside #chart-area
@@ -341,6 +373,7 @@ function renderChart(data, labels) {
       <div class="bar-label">${labels[i]}</div>
     </div>
   `).join('');
+    renderIcons();
 }
 // Step 26: Page Navigation
 function showPage(page, el) {
@@ -468,19 +501,30 @@ let liveW = 0.00;
 //stores the currently selected customer from the search dropdown
 let selectedCustomer = null;
 
+let paymentOption = 'later'; // 'now' | 'later' — set by the Payment toggle in the modal
+
+function setPaymentOption(option) {
+    paymentOption = option;
+    document.getElementById('pay-now-btn').classList.toggle('active', option === 'now');
+    document.getElementById('pay-later-btn').classList.toggle('active', option === 'later');
+}
+
 //stores current weight mode: 'live' or 'manual'
 let weightMode = 'live';
 
 // Holds the customer loaded from a profile QR scan
 let scannedProfileCustomer = null;
 
-let minWeightKg = 3; // overwritten by Firebase settings on load
-
 async function loadSettingsIntoForm() {
     const settings = await getSettings();
-    minWeightKg = settings.minWeightKg || 3;
-    const input = document.getElementById('min-weight-input');
-    if (input) input.value = minWeightKg;
+
+    MIN_CHARGE = settings.minCharge != null ? settings.minCharge : 75.00;
+    const minInput = document.getElementById('min-charge-input');
+    if (minInput) minInput.value = MIN_CHARGE.toFixed(2);
+
+    RATE = settings.ratePerKg != null ? settings.ratePerKg : 65;
+    const rateInput = document.getElementById('rate-input');
+    if (rateInput) rateInput.value = RATE.toFixed(2);
 }
 
 // Connects to Firebase and listens for real Arduino readings
@@ -545,6 +589,7 @@ function populateSelectedCustomerChip(customer) {
 // regardless of what future edits get added to this function.
 function openModal(prefillCustomer = null) {
     weightMode = 'live';
+    setPaymentOption('later');weightMode = 'live';
 
     document.getElementById('form-weight-input').value = '';
     document.getElementById('form-weight-input').style.display = 'none';
@@ -596,7 +641,7 @@ function updateDashboardKPIs(orders) {
 
     set('kpi-orders',  todayOrders.length);
     set('kpi-weight',  totalWeightToday.toFixed(1));
-    set('kpi-revenue', '₱' + Math.round(revenueToday).toLocaleString());
+    set('kpi-revenue', '₱' + revenueToday.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
     set('kpi-pending', pendingPickup);
 }
 
@@ -604,7 +649,7 @@ function updateDashboardKPIs(orders) {
 function updateCost() {
   const w = getActiveWeight();
   const s = document.getElementById('form-service').value;
-  document.getElementById('form-cost').textContent = '₱' + cost(w).toFixed(0);
+    document.getElementById('form-cost').textContent = '₱' + cost(w).toFixed(2);
 }
 
 // Handles the Create Order button
@@ -617,23 +662,30 @@ let isSubmittingOrder = false;
 
 let isProcessingScan = false;
 
+// Holds the setTimeout ID for a pending auto-advance, so it can be
+// cancelled if the admin clicks Cancel or the button manually before
+// the delay finishes
+let pendingAutoAdvanceTimer = null;
+
+// How long the modal stays visible before auto-confirming the next
+// status. Tune to taste — long enough to glance at, short enough to
+// not slow the line down.
+const AUTO_ADVANCE_DELAY_MS = 1500;
+
 async function submitOrder() {
     if (isSubmittingOrder) return; // already in flight — ignore this trigger
 
     if (!selectedCustomer) {
-        showToast('⚠️', 'Please select a customer first.');
+        showToast('alert-triangle', 'Please select a customer first.');
         return;
     }
 
     const w = getActiveWeight();
     if (!w || w <= 0) {
-        showToast('⚠️', 'Please enter a valid weight.');
+        showToast('alert-triangle', 'Please enter a valid weight.');
         return;
     }
-    if (w < minWeightKg) {
-        showToast('⚠️', `Minimum ${minWeightKg} kg required per transaction.`);
-        return;
-    }
+
 
     isSubmittingOrder = true;
 
@@ -656,19 +708,20 @@ async function submitOrder() {
             amount: cost(w),
             service: s,
             notes: notes,
+            paid: paymentOption === 'now',
         });
 
         const savedOrder = await db.ref(`orders/${orderId}`).once('value');
         const orderData = savedOrder.val();
 
-        showToast('✅', `Order created for ${selectedCustomer.firstName}.`);
+        showToast('check-circle-2', `Order created for ${selectedCustomer.firstName}.`);
         closeModal();
         loadOrders();
 
         autoPrintReceipt(orderData, selectedCustomer);
 
     } catch (err) {
-        showToast('⚠️', 'Error creating order.');
+        showToast('alert-triangle', 'Error creating order.');
         console.error(err);
     } finally {
         isSubmittingOrder = false;
@@ -680,12 +733,13 @@ async function submitOrder() {
 }
 //Step 30: Toast, Filter, and Other Actions
 // Shows a brief notification at the bottom-right for 3 seconds
-function showToast(icon, msg) {
-  const t = document.getElementById('toast');
-  document.getElementById('toast-icon').textContent = icon;
-  document.getElementById('toast-msg').textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000); // auto-hide after 3s
+function showToast(iconName, msg) {
+    const t = document.getElementById('toast');
+    document.getElementById('toast-icon').innerHTML = icon(iconName, 18);
+    document.getElementById('toast-msg').textContent = msg;
+    renderIcons();
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000); // auto-hide after 3s
 }
 
 // Filters table rows by the search query
@@ -698,12 +752,12 @@ function filterTable(q) {
 
 // Simulates a sensor refresh
 function refreshWeight() {
-  showToast('⚖', 'Weight sensor refreshed.');
+    showToast('scale', 'Weight sensor refreshed.');
 }
 
 // Simulates taring the scale
 function tare() {
-  showToast('⊖', 'Scale tared. Offset set to ' + liveW.toFixed(2) + ' kg.');
+    showToast('minus', 'Scale tared. Offset set to ' + liveW.toFixed(2) + ' kg.');
 }
 
 // Marks all notifications as read
@@ -714,7 +768,7 @@ async function markAllRead() {
     const unread = allNotificationsCache.filter(n => !n.read);
 
     if (unread.length === 0) {
-        showToast('🔔', 'No unread notifications.');
+        showToast('bell', 'No unread notifications.');
         return;
     }
 
@@ -722,9 +776,9 @@ async function markAllRead() {
         await Promise.all(
             unread.map(n => markNotificationRead(n.userId, n.notifId))
         );
-        showToast('🔔', 'All notifications marked as read.');
+        showToast('bell', 'All notifications marked as read.');
     } catch (err) {
-        showToast('⚠️', 'Error marking notifications as read.');
+        showToast('alert-triangle','Error marking notifications as read.');
         console.error(err);
     }
 }
@@ -749,7 +803,7 @@ async function updateStatus(orderId) {
 
   const newStatus = cycle[order.status] || 'pending';
   await updateOrderStatus(order.id, newStatus);
-  showToast('✅', `Order updated to ${newStatus}.`);
+    showToast('check-circle-2', `Order updated to ${newStatus}.`);
   loadOrders();
 }
 
@@ -761,29 +815,36 @@ async function viewOrderDetails(orderId) {
         const order = snap.val();
 
         if (!order) {
-            showToast('⚠️', 'Job order not found.');
+            showToast('alert-triangle', 'Job order not found.');
             return;
         }
 
         openOrderScanModal(orderId, order);
 
     } catch (err) {
-        showToast('⚠️', 'Error loading job order.');
+        showToast('alert-triangle', 'Error loading job order.');
         console.error(err);
     }
 }
 
 // Simulates saving settings
 async function saveSettings() {
-    const minInput = document.getElementById('min-weight-input');
-    const newMin   = parseFloat(minInput.value) || 3;
+    const minInput  = document.getElementById('min-charge-input');
+    const rateInput = document.getElementById('rate-input');
+
+    const parsedMin  = parseFloat(minInput.value);
+    const parsedRate = parseFloat(rateInput.value);
+
+    const newMinCharge = (!isNaN(parsedMin)  && parsedMin  >= 0) ? parsedMin  : 75.00;
+    const newRate       = (!isNaN(parsedRate) && parsedRate > 0) ? parsedRate : 65;
 
     try {
-        await saveSettingsToFirebase({ minWeightKg: newMin });
-        minWeightKg = newMin;
-        showToast('💾', 'Settings saved successfully.');
+        await saveSettingsToFirebase({ minCharge: newMinCharge, ratePerKg: newRate });
+        MIN_CHARGE = newMinCharge;
+        RATE = newRate;
+        showToast('save', 'Settings saved successfully.');
     } catch (err) {
-        showToast('⚠️', 'Error saving settings.');
+        showToast('alert-triangle', 'Error saving settings.');
         console.error(err);
     }
 }
@@ -792,11 +853,11 @@ async function saveSettings() {
 // ── ORDER SCAN MODAL ─────────────────────────────────────────
 
 const STATUS_ICONS = {
-  pending: '⏳',
-  washing: '🌀',
-  ready: '✅',
-  picked: '📦',
-  cancelled: '✕',
+    pending: 'hourglass',
+    washing: 'refresh-cw',
+    ready: 'check-circle-2',
+    picked: 'package',
+    cancelled: 'x-circle',
 };
 
 const STATUS_LABELS = {
@@ -817,13 +878,14 @@ let scannedOrderId = null;
 async function handleQRScan(value) {
     const qrValue = (value || '').trim();
     if (!qrValue) return;
+
     if (isProcessingScan) return;
     isProcessingScan = true;
 
     const input = document.getElementById('scan-input');
     if (input) input.value = '';
 
-    showToast('🔎', 'Looking up scanned code...');
+    showToast('search', 'Looking up scanned code...');
 
     try {
         const [orderSnap, customer] = await Promise.all([
@@ -833,35 +895,44 @@ async function handleQRScan(value) {
 
         const order = orderSnap.val();
 
+        // ── Job Order QR (scan 2) — auto-advance, zero click ──────
         if (order) {
             openOrderScanModal(qrValue, order);
             return;
         }
 
         if (!customer) {
-            showToast('⚠️', 'QR code not recognized.');
+            showToast('alert-triangle', 'QR code not recognized.');
             return;
         }
 
         if (customer.status !== 'approved') {
-            showToast('⚠️', `${customer.firstName} is not yet validated.`);
+            showToast('alert-triangle', `${customer.firstName} is not yet validated.`);
             return;
         }
 
         const allOrders    = await getOrdersByUser(qrValue);
         const readyOrders  = allOrders.filter(o => o.status === 'ready');
-        const activeOrders = allOrders.filter(o => o.status === 'pending' || o.status === 'washing');
+        const activeOrders = allOrders.filter(
+            o => o.status === 'pending' || o.status === 'washing'
+        );
 
+        // ── Profile QR with ready order(s) (scan 3) — auto pickup ──
         if (readyOrders.length > 0) {
-            openPickupModal(qrValue, customer, readyOrders);
+            await autoCompletePickup(qrValue, customer, readyOrders);
+
+            // ── Profile QR with an order already in progress ───────────
+            // Unchanged from Phase 2 — prevents a duplicate scan-1 order
         } else if (activeOrders.length > 0) {
             showActiveOrderNotice(customer, activeOrders[0]);
+
+            // ── Profile QR, nothing active — scan 1, unchanged ─────────
         } else {
             openNewOrderFromScan(qrValue, customer);
         }
 
     } catch (err) {
-        showToast('⚠️', 'Error reading QR. Try again.');
+        showToast('alert-triangle', 'Error reading QR. Try again.');
         console.error(err);
     } finally {
         isProcessingScan = false;
@@ -869,7 +940,7 @@ async function handleQRScan(value) {
 }
 
 function showActiveOrderNotice(customer, order) {
-    showToast('ℹ️', `${customer.firstName} already has an active order (${STATUS_LABELS[order.status] || order.status}).`);
+    showToast('info', `${customer.firstName} already has an active order (${STATUS_LABELS[order.status] || order.status}).`);
     openOrderScanModal(order.id, order);
 }
 
@@ -877,13 +948,13 @@ function showActiveOrderNotice(customer, order) {
 
 function openOrderScanModal(orderId, order) {
   scannedOrderId = orderId;
-  const status = order.status || 'pending';
+    const status = order.status || 'pending';
 
   // Status banner color
   const banner = document.getElementById('scan-status-banner');
   banner.className = `scan-status-banner ${status}`;
-  document.getElementById('scan-status-icon').textContent =
-    STATUS_ICONS[status] || '⏳';
+    document.getElementById('scan-status-icon').innerHTML =
+        icon(STATUS_ICONS[status] || 'hourglass', 18);
   document.getElementById('scan-status-label').textContent =
     STATUS_LABELS[status] || status;
 
@@ -897,7 +968,7 @@ function openOrderScanModal(orderId, order) {
   document.getElementById('scan-weight').textContent =
     (order.kg || 0).toFixed(2) + ' kg';
   document.getElementById('scan-amount').textContent =
-    '₱' + Math.round(order.amount || 0);
+      '₱' + (order.amount || 0).toFixed(2);
   document.getElementById('scan-date-in').textContent =
     order.dateIn || '—';
 
@@ -917,13 +988,13 @@ function openOrderScanModal(orderId, order) {
   actionsDiv.innerHTML = '';
   terminalDiv.style.display = 'none';
 
-  if (status === 'pending' || status === 'washing') {
-    const nextStatus = status === 'pending' ? 'washing' : 'ready';
-    const nextLabel = status === 'pending'
-      ? '🌀 Mark as Washing'
-      : '✅ Mark as Ready';
+    if (status === 'pending' || status === 'washing') {
+        const nextStatus = status === 'pending' ? 'washing' : 'ready';
+        const nextLabel = status === 'pending'
+            ? icon('refresh-cw', 14) + ' Mark as Washing'
+            : icon('check-circle-2', 14) + ' Mark as Ready';
 
-    actionsDiv.innerHTML = `
+        actionsDiv.innerHTML = `
       <button class="btn btn-ghost"
               onclick="closeOrderScanModal()">
         Cancel
@@ -934,8 +1005,8 @@ function openOrderScanModal(orderId, order) {
       </button>
     `;
 
-  } else if (status === 'ready') {
-    actionsDiv.innerHTML = `
+    } else if (status === 'ready') {
+        actionsDiv.innerHTML = `
       <button class="btn btn-ghost"
               onclick="closeOrderScanModal()">
         Cancel
@@ -943,35 +1014,60 @@ function openOrderScanModal(orderId, order) {
       <button class="btn btn-primary"
               style="background:var(--accent)"
               onclick="scanMarkStatus('${orderId}', 'picked')">
-        📦 Mark as Picked Up / Paid
+        ${icon('package', 14)} Mark as Picked Up / Paid
       </button>
     `;
 
-  } else {
-    // Already terminal — picked or cancelled
-    terminalDiv.style.display = 'block';
-    terminalDiv.textContent = status === 'picked'
-      ? '✅ This order has already been picked up.'
-      : '✕ This order was cancelled.';
-  }
+    } else {
+        // Already terminal — picked or cancelled
+        terminalDiv.style.display = 'block';
+        terminalDiv.innerHTML = status === 'picked'
+            ? icon('check-circle-2', 16) + ' This order has already been picked up.'
+            : icon('x-circle', 16) + ' This order was cancelled.';
+    }
 
   document.getElementById('order-scan-modal').classList.add('open');
+
+
+// ── AUTO-ADVANCE — only when there's an actual next step ──────
+// 'ready', 'picked', 'cancelled' have no forward action, so this
+// safely no-ops for those (matches your existing button logic)
+
+    if (status === 'pending' || status === 'washing') {
+        const nextStatus = status === 'pending' ? 'washing' : 'ready';
+
+        if (pendingAutoAdvanceTimer) clearTimeout(pendingAutoAdvanceTimer);
+
+        pendingAutoAdvanceTimer = setTimeout(() => {
+            pendingAutoAdvanceTimer = null;
+            scanMarkStatus(orderId, nextStatus);
+        }, AUTO_ADVANCE_DELAY_MS);
+    }
+    renderIcons();
 }
 
 function closeOrderScanModal() {
-  document.getElementById('order-scan-modal').classList.remove('open');
-  scannedOrderId = null;
+    if (pendingAutoAdvanceTimer) {
+        clearTimeout(pendingAutoAdvanceTimer);
+        pendingAutoAdvanceTimer = null;
+    }
+    document.getElementById('order-scan-modal').classList.remove('open');
+    scannedOrderId = null;
 }
 
 // Marks the order with the new status
 async function scanMarkStatus(orderId, newStatus) {
+    if (pendingAutoAdvanceTimer) {
+        clearTimeout(pendingAutoAdvanceTimer);
+        pendingAutoAdvanceTimer = null;
+    }
   try {
     await updateOrderStatus(orderId, newStatus);
-    showToast('✅', `Order marked as ${STATUS_LABELS[newStatus]}.`);
+      showToast('check-circle-2', `Order marked as ${STATUS_LABELS[newStatus]}.`);
     closeOrderScanModal();
     loadOrders();
   } catch (err) {
-    showToast('⚠️', 'Error updating order status.');
+      showToast('alert-triangle', 'Error updating order status.');
     console.error(err);
   }
 }
@@ -1007,7 +1103,7 @@ async function openProfileScanModal(userId, customer) {
 
   document.getElementById('ps-ready-count').textContent = readyOrders.length;
   document.getElementById('ps-active-count').textContent = activeOrders.length;
-  document.getElementById('ps-balance').textContent = '₱' + Math.round(balance);
+  document.getElementById('ps-balance').textContent = '₱' + balance.toFixed(2);
 
   // Fill orders table
   const tbody = document.getElementById('ps-orders-body');
@@ -1039,17 +1135,17 @@ async function openProfileScanModal(userId, customer) {
         </td>
         <td>
           <span class="cost-cell">
-            ₱${Math.round(o.amount || 0)}
+            ₱${(o.amount || 0).toFixed(2)}
           </span>
         </td>
-        <td>${statusBadge(o.status)}</td>
+                <td>${statusBadge(o.status)}</td>
         <td>
           ${o.status === 'ready' ? `
             <button
               class="btn btn-primary"
               style="padding:3px 10px;font-size:0.72rem"
               onclick="quickMarkPickedUp('${o.id}')">
-              📦 Picked Up
+              ${icon('package', 13)} Picked Up
             </button>
           ` : `
             <span style="color:var(--muted);font-size:0.75rem">—</span>
@@ -1059,7 +1155,8 @@ async function openProfileScanModal(userId, customer) {
     `).join('');
   }
 
-  document.getElementById('profile-scan-modal').classList.add('open');
+    document.getElementById('profile-scan-modal').classList.add('open');
+    renderIcons();
 }
 
 function closeProfileScanModal() {
@@ -1071,7 +1168,7 @@ function closeProfileScanModal() {
 async function quickMarkPickedUp(orderId) {
   try {
     await updateOrderStatus(orderId, 'picked');
-    showToast('✅', 'Order marked as Picked Up.');
+      showToast('check-circle-2', 'Order marked as Picked Up.');
 
     // Refresh the profile modal with updated order data
     const c = scannedProfileCustomer;
@@ -1079,7 +1176,7 @@ async function quickMarkPickedUp(orderId) {
 
     loadOrders();
   } catch (err) {
-    showToast('⚠️', 'Error updating order.');
+      showToast('alert-triangle', 'Error updating order.');
     console.error(err);
   }
 }
@@ -1132,6 +1229,7 @@ async function loadOrders() {
 
     updateDashboardKPIs(orders);
     updateStatusOverview(orders);
+    updateUnclaimedLaundry(orders);
     renderTopCustomers(orders);
     renderRecords(orders);
     renderDashboardChart(currentChartView);
@@ -1330,17 +1428,19 @@ async function loadPendingCustomers() {
                  font-size:0.72rem;color:var(--muted2)">
         ${new Date(c.createdAt).toLocaleDateString('en-PH')}
       </td>
-      <td>
+            <td>
         <button
           class="btn btn-primary"
           style="padding:4px 14px;font-size:0.75rem"
           onclick="validateCustomer('${c.id}')"
         >
-          ✓ Validate
+          ${icon('check', 13)} Validate
         </button>
       </td>
     </tr>
   `).join('');
+
+    renderIcons();
 }
 
 // ── LOAD APPROVED CUSTOMERS ──────────────────────────────────
@@ -1405,6 +1505,7 @@ async function loadApprovedCustomers() {
       </td>
     </tr>
   `).join('');
+    renderIcons();
 }
 
 // QR button in the table (not from profile modal)
@@ -1431,12 +1532,12 @@ async function handleValidationScan(event) {
     const customer = await getCustomer(qrValue);
 
     if (!customer) {
-      showToast('⚠️', 'QR code not found. Not a registered customer.');
+        showToast('alert-triangle', 'QR code not found. Not a registered customer.');
       return;
     }
 
     if (customer.status === 'approved') {
-      showToast('ℹ️',
+        showToast('info',
         `${customer.firstName} ${customer.lastName} ` +
         `is already validated.`);
       return;
@@ -1446,7 +1547,7 @@ async function handleValidationScan(event) {
     await validateCustomer(qrValue);
 
   } catch (err) {
-    showToast('⚠️', 'Error reading QR. Try again.');
+      showToast('alert-triangle', 'Error reading QR. Try again.');
     console.error(err);
   }
 }
@@ -1464,11 +1565,11 @@ async function validateCustomer(userId) {
       // Warn (don't block) if this contact matches another existing profile
       const duplicate = await findCustomerByContact(customer.contact1);
       if (duplicate && duplicate.id !== userId) {
-          showToast('⚠️',
+          showToast('alert-triangle',
               `Note: this contact also exists under ${duplicate.firstName} ${duplicate.lastName}.`);
       }
 
-    showToast('✅',
+      showToast('check-circle-2',
       `${customer.firstName} ${customer.lastName} validated!`);
 
     // Close pending modal and show QR result
@@ -1483,7 +1584,7 @@ async function validateCustomer(userId) {
     await loadApprovedCustomers();
 
   } catch (err) {
-    showToast('⚠️', 'Error validating customer.');
+      showToast('alert-triangle', 'Error validating customer.');
     console.error(err);
   }
 }
@@ -1492,13 +1593,14 @@ async function validateCustomer(userId) {
 
 
 function printQR() {
+    clearPrintAreas();
   // QR is now inside the QR Result Modal (#qr-result-code)
   // instead of the old inline #profile-qr-code on the page
   const qrImg = document.querySelector('#qr-result-code img');
   const nameEl = document.getElementById('qr-result-name');
 
   if (!qrImg) {
-    showToast('⚠️', 'No QR to print. Open a customer QR first.');
+      showToast('alert-triangle', 'No QR to print. Open a customer QR first.');
     return;
   }
 
@@ -1555,7 +1657,7 @@ async function registerCustomer() {
     }
 
     if (hasError) {
-        showToast('⚠️', 'Please fix the highlighted fields.');
+        showToast('alert-triangle', 'Please fix the highlighted fields.');
         return;
     }
 
@@ -1564,7 +1666,7 @@ async function registerCustomer() {
         if (existing) {
             showFieldError('contact1',
                 `Already registered to ${existing.firstName} ${existing.lastName}.`);
-            showToast('⚠️', 'This contact number is already registered.');
+            showToast('alert-triangle', 'This contact number is already registered.');
             return;
         }
 
@@ -1583,11 +1685,11 @@ async function registerCustomer() {
             document.getElementById(id).value = '';
         });
 
-        showToast('✅', `${firstName} registered and approved.`);
+        showToast('check-circle-2', `${firstName} registered and approved.`);
         await loadApprovedCustomers();
 
     } catch (err) {
-        showToast('⚠️', 'Error saving customer.');
+        showToast('alert-triangle', 'Error saving customer.');
         console.error(err);
     }
 }
@@ -1596,6 +1698,23 @@ async function registerCustomer() {
 
 // Holds the current receipt data so printReceipt() can access it
 let currentReceipt = null;
+
+// Prevents stale content from a previous print job (receipt, report,
+// or QR card) from showing up alongside the current one — each print
+// area only gets cleared right before whichever one is actually used.
+function clearPrintAreas() {
+    const receiptArea = document.getElementById('print-receipt-area');
+    const reportArea  = document.getElementById('print-report-area');
+    const qrCode       = document.getElementById('print-qr-code');
+    const qrName        = document.getElementById('print-name');
+    const qrContact     = document.getElementById('print-contact');
+
+    if (receiptArea) receiptArea.innerHTML = '';
+    if (reportArea)  reportArea.innerHTML  = '';
+    if (qrCode)       qrCode.innerHTML      = '';
+    if (qrName)        qrName.textContent    = '';
+    if (qrContact)     qrContact.textContent = '';
+}
 
 /**
  * Shows the receipt modal after an order is created.
@@ -1614,7 +1733,11 @@ function populateReceiptFields(order, customer) {
     document.getElementById('r-contact').textContent = customer.contact1 + (customer.contact2 ? ' / ' + customer.contact2 : '');
     document.getElementById('r-service').textContent = order.service || '—';
     document.getElementById('r-weight').textContent = (order.kg || 0).toFixed(2) + ' kg';
-    document.getElementById('r-amount').textContent = '₱' + Math.round(order.amount || 0);
+    document.getElementById('r-rate').textContent = '₱' + RATE.toFixed(2) + ' / kg';
+    document.getElementById('r-amount').textContent = '₱' + (order.amount || 0).toFixed(2);
+    document.getElementById('r-payment-status').innerHTML = order.paid
+        ? icon('check-circle-2', 15) + ' PAID'
+        : icon('clock', 15) + ' UNPAID — Pay upon pickup';
     document.getElementById('r-finish-time').textContent = order.estimatedFinishTime || '—';
     document.getElementById('r-finish-date').textContent = order.estimatedFinishDate || '—';
     document.getElementById('r-duration').textContent = order.estimatedHours ? order.estimatedHours + ' hours' : '—';
@@ -1626,6 +1749,21 @@ function populateReceiptFields(order, customer) {
         colorDark: '#000000', colorLight: '#ffffff',
         correctLevel: QRCode.CorrectLevel.H,
     });
+
+    // Convert the canvas to a static <img> right away. Canvas pixel
+    // data is invisible to .outerHTML — only a real <img> with the
+    // picture baked into its src (a data URL) survives being cloned
+    // into the print area by autoPrintReceipt().
+    const qrCanvas = orderQRBox.querySelector('canvas');
+    if (qrCanvas) {
+        const qrImg = document.createElement('img');
+        qrImg.src = qrCanvas.toDataURL('image/png');
+        qrImg.width = 160;
+        qrImg.height = 160;
+        orderQRBox.innerHTML = '';
+        orderQRBox.appendChild(qrImg);
+    }
+    renderIcons();
 }
 
 function showReceiptModal(order, customer) {
@@ -1634,6 +1772,7 @@ function showReceiptModal(order, customer) {
 }
 
 function autoPrintReceipt(order, customer) {
+    clearPrintAreas();
     populateReceiptFields(order, customer);
 
     const receiptCard = document.getElementById('receipt-card');
@@ -1649,6 +1788,9 @@ function autoPrintReceipt(order, customer) {
 function returnToScanReadyState() {
     closeModal();
     closeReceiptModal();
+    closeOrderScanModal();
+    closePickupModal();
+    closeProfileScanModal();
     selectedCustomer = null;
 
     const scanInput = document.getElementById('scan-input');
@@ -1668,6 +1810,7 @@ function closeReceiptModal() {
  * into the print-only area and triggering window.print().
  */
 function printReceipt() {
+    clearPrintAreas();
   const receiptCard = document.getElementById('receipt-card');
   const printArea = document.getElementById('print-receipt-area');
 
@@ -1750,6 +1893,63 @@ function closePendingModal() {
   document.getElementById('pending-modal').classList.remove('open');
 }
 
+// ── ZERO-CLICK STATUS PROGRESSION ────────────────────────────
+// Maps a current status to what scanning should advance it to.
+// 'pending' is included only for backward-compat with any orders
+// created before this change — new orders never start there anymore.
+const NEXT_STATUS = {
+    pending: 'washing',
+    washing: 'ready',
+};
+
+// Called when a Job Order QR is scanned (scan 2 in the new flow).
+// Advances the order one step automatically — no modal, no button.
+// If the order is already at a terminal/no-advance state, it's a
+// harmless no-op with an informational toast, per spec.
+async function autoAdvanceJobOrder(orderId, order) {
+    const next = NEXT_STATUS[order.status];
+
+    if (!next) {
+        const label = order.status === 'ready'     ? 'already ready for pickup'
+            : order.status === 'picked'    ? 'already picked up'
+                : order.status === 'cancelled' ? 'cancelled'
+                    : order.status;
+        showToast('info', `This job order is ${label}.`);
+        returnToScanReadyState();
+        return;
+    }
+
+    try {
+        await updateOrderStatus(orderId, next);
+        showToast('check-circle-2', `${order.customerName || 'Job order'} → ${next}.`);
+    } catch (err) {
+        showToast('alert-triangle', 'Error updating job order status.');
+        console.error(err);
+    } finally {
+        returnToScanReadyState();
+    }
+}
+
+// Called when a customer's Profile QR is scanned and they have one
+// or more ready orders (scan 3 in the new flow). Marks ALL of their
+// ready orders as picked up in a single automatic action.
+async function autoCompletePickup(userId, customer, readyOrders) {
+    try {
+        await Promise.all(
+            readyOrders.map(o => updateOrderStatus(o.id, 'picked'))
+        );
+        const label = readyOrders.length > 1
+            ? `${readyOrders.length} orders`
+            : 'order';
+        showToast('package', `${customer.firstName} — ${label} marked picked up.`);
+    } catch (err) {
+        showToast('alert-triangle', 'Error marking orders as picked up.');
+        console.error(err);
+    } finally {
+        returnToScanReadyState();
+    }
+}
+
 // ── CUSTOMER PROFILE MODAL ───────────────────────────────────
 // Opened by clicking a customer row in the approved table
 
@@ -1792,7 +1992,7 @@ async function openCustomerProfileModal(userId) {
     document.getElementById('cp-active-count').textContent =
       activeOrders.length;
     document.getElementById('cp-balance').textContent =
-      '₱' + Math.round(balance);
+        '₱' + balance.toFixed(2);
 
     // Fill orders table
     const tbody = document.getElementById('cp-orders-body');
@@ -1824,17 +2024,17 @@ async function openCustomerProfileModal(userId) {
           </td>
           <td>
             <span class="cost-cell">
-              ₱${Math.round(o.amount || 0)}
+              ₱${(o.amount || 0).toFixed(2)}
             </span>
           </td>
-          <td>${statusBadge(o.status)}</td>
+                    <td>${statusBadge(o.status)}</td>
           <td>
             ${o.status === 'ready' ? `
               <button
                 class="btn btn-primary"
                 style="padding:3px 10px;font-size:0.72rem"
                 onclick="cpMarkPickedUp('${o.id}')">
-                📦 Picked Up
+                ${icon('package', 13)} Picked Up
               </button>
             ` : `
               <span style="color:var(--muted);font-size:0.75rem">
@@ -1846,11 +2046,12 @@ async function openCustomerProfileModal(userId) {
       `).join('');
     }
 
-    document.getElementById('customer-profile-modal')
-      .classList.add('open');
+      document.getElementById('customer-profile-modal')
+          .classList.add('open');
+      renderIcons();
 
   } catch (err) {
-    showToast('⚠️', 'Error loading customer profile.');
+      showToast('alert-triangle', 'Error loading customer profile.');
     console.error(err);
   }
 }
@@ -1865,7 +2066,7 @@ function closeCustomerProfileModal() {
 async function cpMarkPickedUp(orderId) {
   try {
     await updateOrderStatus(orderId, 'picked');
-    showToast('✅', 'Order marked as Picked Up.');
+      showToast('check-circle-2', 'Order marked as Picked Up.');
 
     // Refresh the modal
     if (viewedCustomer) {
@@ -1873,7 +2074,7 @@ async function cpMarkPickedUp(orderId) {
     }
     loadOrders();
   } catch (err) {
-    showToast('⚠️', 'Error updating order.');
+      showToast('alert-triangle', 'Error updating order.');
     console.error(err);
   }
 }
@@ -1960,7 +2161,7 @@ const AUTO_SUBMIT_ON_SCAN = true;
 
 function openNewOrderFromScan(userId, customer) {
     openModal({ id: userId, ...customer });
-    showToast('✅', `Customer loaded: ${customer.firstName} ${customer.lastName}`);
+    showToast('check-circle-2', `Customer loaded: ${customer.firstName} ${customer.lastName}`);
 
     if (AUTO_SUBMIT_ON_SCAN) {
         // Small delay lets the live weight reading settle before
@@ -2002,7 +2203,7 @@ function openPickupModal(userId, customer, readyOrders) {
         <div class="pu-order-meta">
           ${o.service} · ${(o.kg || 0).toFixed(1)} kg ·
           <span style="color:var(--accent)">
-            ₱${Math.round(o.amount || 0)}
+            ₱${(o.amount || 0).toFixed(2)}
           </span>
         </div>
         <div class="pu-order-time">
@@ -2010,20 +2211,21 @@ function openPickupModal(userId, customer, readyOrders) {
         </div>
       </div>
 
-      <button
+            <button
         class="btn btn-primary pu-pickup-btn"
         id="pu-btn-${o.id}"
         onclick="markPickedUpFromModal('${o.id}', '${userId}', '${customer.firstName}', '${customer.lastName}')"
       >
-        📦 Picked Up
+        ${icon('package', 13)} Picked Up
       </button>
 
     </div>
   `).join('');
 
-  document.getElementById('pickup-modal').classList.add('open');
+    document.getElementById('pickup-modal').classList.add('open');
+    renderIcons();
 
-  showToast('✅',
+    showToast('check-circle-2',
     `${customer.firstName} has ${readyOrders.length} order` +
     `${readyOrders.length > 1 ? 's' : ''} ready for pickup.`);
 }
@@ -2045,16 +2247,17 @@ async function markPickedUpFromModal(orderId, userId, firstName, lastName) {
     if (item) {
       item.style.opacity = '0.5';
       item.style.pointerEvents = 'none';
-      if (btn) {
-        btn.textContent = '✅ Done';
-        btn.style.background = 'var(--surface2)';
-        btn.style.color = 'var(--accent)';
-        btn.style.border = '1px solid var(--accent)';
-      }
+        if (btn) {
+            btn.innerHTML = icon('check-circle-2', 13) + ' Done';
+            btn.style.background = 'var(--surface2)';
+            btn.style.color = 'var(--accent)';
+            btn.style.border = '1px solid var(--accent)';
+            renderIcons();
+        }
     }
 
-    showToast('✅', `Order marked as Picked Up.`);
-    loadOrders();
+      showToast('check-circle-2', `Order marked as Picked Up.`);
+      loadOrders();
 
     // Check if all orders in this modal are now done
     // If yes, close and offer to create a new order
@@ -2064,13 +2267,13 @@ async function markPickedUpFromModal(orderId, userId, firstName, lastName) {
     if (allDone) {
       setTimeout(() => {
         closePickupModal();
-        showToast('🎉',
+          showToast('party-popper',
           `All orders picked up for ${firstName}.`);
       }, 1200);
     }
 
   } catch (err) {
-    showToast('⚠️', 'Error updating order.');
+      showToast('alert-triangle', 'Error updating order.');
     console.error(err);
     // Re-enable button if it failed
     if (btn) {
@@ -2084,8 +2287,6 @@ async function markPickedUpFromModal(orderId, userId, firstName, lastName) {
 function updateStatusOverview(orders) {
     const ongoing = orders.filter(o => o.status === 'pending' || o.status === 'washing').length;
     const ready   = orders.filter(o => o.status === 'ready').length;
-    const picked  = orders.filter(o => o.status === 'picked').length;
-    const all     = orders.length;
 
     const set = (id, val) => {
         const el = document.getElementById(id);
@@ -2094,8 +2295,54 @@ function updateStatusOverview(orders) {
 
     set('count-ongoing', ongoing);
     set('count-ready',   ready);
-    set('count-picked',  picked);
-    set('count-all',     all);
+}
+
+// Tracks whether the unclaimed laundry list is currently expanded
+let unclaimedListOpen = false;
+
+// Toggles the dropdown list open/closed when the ribbon is clicked
+function toggleUnclaimedList() {
+    unclaimedListOpen = !unclaimedListOpen;
+    const list = document.getElementById('unclaimed-list');
+    const arrow = document.getElementById('unclaimed-arrow');
+    if (list) list.style.display = unclaimedListOpen ? 'block' : 'none';
+    if (arrow) arrow.textContent = unclaimedListOpen ? '▴' : '▾';
+}
+
+// Fills the ribbon count and the expandable list — "unclaimed" means
+// status is 'ready' but not yet 'picked' up. Groups multiple ready
+// orders under the same customer into a single row.
+function updateUnclaimedLaundry(orders) {
+    const readyOrders = orders.filter(o => o.status === 'ready');
+
+    const countEl = document.getElementById('unclaimed-count');
+    if (countEl) countEl.textContent = readyOrders.length;
+
+    const grouped = {};
+    readyOrders.forEach(o => {
+        const key = o.userId || o.customerName;
+        if (!grouped[key]) {
+            grouped[key] = { name: o.customerName || 'Unknown', count: 0 };
+        }
+        grouped[key].count += 1;
+    });
+
+    const customers = Object.values(grouped);
+    const listEl = document.getElementById('unclaimed-list');
+    if (!listEl) return;
+
+    if (customers.length === 0) {
+        listEl.innerHTML = `<div class="unclaimed-empty">No unclaimed laundry right now.</div>`;
+        return;
+    }
+
+    listEl.innerHTML = customers.map(c => `
+      <div class="unclaimed-item">
+        <span class="unclaimed-item-name">${c.name}</span>
+        <span class="unclaimed-item-count">${c.count} order${c.count > 1 ? 's' : ''}</span>
+      </div>
+    `).join('');
+    renderIcons();
 }
 
 // ── REPORTS ──────────────────────────────────────────────────
@@ -2167,7 +2414,7 @@ function setReportPeriod(period, el) {
 
 // Fetches all orders, filters by active period, renders everything
 async function loadReport() {
-    const { start, end } = getDateRangeForPeriod(currentReportPeriod);
+    const {start, end} = getDateRangeForPeriod(currentReportPeriod);
 
     const allOrders = await getAllOrders();
 
@@ -2180,21 +2427,67 @@ async function loadReport() {
     document.getElementById('report-period-label').textContent =
         getReportPeriodLabel(currentReportPeriod, start, end);
 
-    renderReportSummary(filtered);
+    renderReportSummary(filtered, currentReportPeriod, start, end);
     renderReportChart(filtered, currentReportPeriod, start, end);
 }
 
-// Fills the 4 KPI cards
-function renderReportSummary(orders) {
-    const totalOrders  = orders.length;
-    const totalWeight  = orders.reduce((sum, o) => sum + (o.kg || 0), 0);
-    const totalRevenue = orders.reduce((sum, o) => sum + (o.amount || 0), 0);
-    const avgOrder     = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+// How many time-buckets the current period spans, used to compute
+// "Average Job Orders" per hour/day/month depending on granularity
+function getBucketCount(period, start, end) {
+    if (period === 'daily')   return 24;
+    if (period === 'weekly')  return 7;
+    if (period === 'monthly') return end.getDate();
+    if (period === 'yearly')  return 12;
+    // custom — inclusive day count across the picked range
+    const days = Math.floor((end - start) / 86400000) + 1;
+    return Math.max(days, 1);
+}
 
-    document.getElementById('report-total-orders').textContent  = totalOrders;
-    document.getElementById('report-total-weight').textContent  = totalWeight.toFixed(1);
-    document.getElementById('report-total-revenue').textContent = '₱' + Math.round(totalRevenue).toLocaleString();
-    document.getElementById('report-avg-order').textContent     = '₱' + Math.round(avgOrder).toLocaleString();
+function getBucketLabel(period) {
+    if (period === 'daily')   return 'Avg. Job Orders / Hour';
+    if (period === 'weekly')  return 'Avg. Job Orders / Day';
+    if (period === 'monthly') return 'Avg. Job Orders / Day';
+    if (period === 'yearly')  return 'Avg. Job Orders / Month';
+    return 'Avg. Job Orders / Day';
+}
+
+// Fills the KPI cards — orders passed in are already filtered to the
+// selected period by loadReport(). period/start/end are needed here
+// to compute the correct "Average Job Orders" bucket size.
+function renderReportSummary(orders, period, start, end) {
+    const fmt = n => n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const totalOrders = orders.length;
+    const totalWeight = orders.reduce((sum, o) => sum + (o.kg || 0), 0);
+
+    // Total Sales — successful payments for orders already picked up
+    const totalSales = orders
+        .filter(o => o.status === 'picked' && o.paid)
+        .reduce((sum, o) => sum + (o.amount || 0), 0);
+
+    // Total Collectibles — count of individual picked-up ORDERS in
+    // this period (not unique customers, not a peso amount)
+    const totalCollectibles = orders.filter(o => o.status === 'picked').length;
+
+    // Grand Total — every job order in the period, any status EXCEPT cancelled
+    const grandTotal = orders
+        .filter(o => o.status !== 'cancelled')
+        .reduce((sum, o) => sum + (o.amount || 0), 0);
+
+    const bucketCount      = getBucketCount(period, start, end);
+    const avgOrders        = totalOrders / bucketCount;
+    const avgSalesPerOrder = totalOrders > 0 ? grandTotal / totalOrders : 0;
+
+    document.getElementById('report-total-orders').textContent       = totalOrders;
+    document.getElementById('report-total-weight').textContent       = totalWeight.toFixed(1);
+    document.getElementById('report-total-revenue').textContent      = '₱' + fmt(totalSales);
+    document.getElementById('report-total-collectibles').textContent = totalCollectibles;
+    document.getElementById('report-grand-total').textContent        = '₱' + fmt(grandTotal);
+
+    const avgLabelEl = document.getElementById('report-avg-orders-label');
+    if (avgLabelEl) avgLabelEl.textContent = getBucketLabel(period);
+    document.getElementById('report-avg-orders').textContent = avgOrders.toFixed(1);
+    document.getElementById('report-avg-order').textContent  = '₱' + fmt(avgSalesPerOrder);
 }
 
 // Builds the revenue trend bar chart — separate from the dashboard's
@@ -2207,11 +2500,12 @@ function renderReportRevenueChart(data, labels) {
 
     el.innerHTML = data.map((v, i) => `
     <div class="bar-wrap">
-      <div class="bar-tooltip">₱${Math.round(v).toLocaleString()}</div>
+      <div class="bar-tooltip">₱${v.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
       <div class="bar" style="height:${Math.max(4, (v / max) * 100)}%;background:var(--accent)"></div>
       <div class="bar-label">${labels[i]}</div>
     </div>
   `).join('');
+    renderIcons();
 }
 
 // Groups orders correctly depending on the period, then draws the chart
@@ -2285,178 +2579,190 @@ function renderReportChart(orders, period, start, end) {
 
 
 // Builds a printable version of the current report and opens print dialog
-function printReport() {
-    const periodLabel  = document.getElementById('report-period-label').textContent;
-    const totalOrders  = document.getElementById('report-total-orders').textContent;
-    const totalWeight  = document.getElementById('report-total-weight').textContent;
-    const totalRevenue = document.getElementById('report-total-revenue').textContent;
-    const avgOrder     = document.getElementById('report-avg-order').textContent;
+    function printReport() {
+        clearPrintAreas();
 
-    const printArea = document.getElementById('print-report-area');
+        const periodLabel       = document.getElementById('report-period-label').textContent;
+        const totalOrders       = document.getElementById('report-total-orders').textContent;
+        const totalWeight       = document.getElementById('report-total-weight').textContent;
+        const totalRevenue      = document.getElementById('report-total-revenue').textContent;
+        const totalCollectibles = document.getElementById('report-total-collectibles').textContent;
+        const grandTotal        = document.getElementById('report-grand-total').textContent;
+        const avgOrdersLabel    = document.getElementById('report-avg-orders-label').textContent;
+        const avgOrders         = document.getElementById('report-avg-orders').textContent;
+        const avgOrder          = document.getElementById('report-avg-order').textContent;
 
-    printArea.innerHTML = `
+        const printArea = document.getElementById('print-report-area');
+
+        printArea.innerHTML = `
     <div style="text-align:center;margin-bottom:24px">
-      <div style="font-size:1.6rem;font-weight:800">🧺 LaundryMatic</div>
-      <div style="font-size:0.85rem;color:#555">Smart Weighing & Recording System</div>
+      <div style="font-size:1.6rem;font-weight:800">${icon('shirt', 26)} LaundryMatic</div>
+      <div style="font-size:0.85rem;color:#555">Weighing & Recording System</div>
       <div style="font-size:0.8rem;color:#777">Calinog, Iloilo</div>
     </div>
     <div style="font-size:1.1rem;font-weight:700;margin-bottom:16px">Sales Report — ${periodLabel}</div>
     <table style="margin-bottom:24px">
       <tr><td style="font-weight:600">Total Job Orders</td><td>${totalOrders}</td></tr>
       <tr><td style="font-weight:600">Total Weight</td><td>${totalWeight} kg</td></tr>
-      <tr><td style="font-weight:600">Total Revenue</td><td>${totalRevenue}</td></tr>
-      <tr><td style="font-weight:600">Average per Order</td><td>${avgOrder}</td></tr>
+            <tr><td style="font-weight:600">Total Sales</td><td>${totalRevenue}</td></tr>
+      <tr><td style="font-weight:600">Total Collectibles</td><td>${totalCollectibles}</td></tr>
+      <tr><td style="font-weight:600">Grand Total</td><td>${grandTotal}</td></tr>
+      <tr><td style="font-weight:600">${avgOrdersLabel}</td><td>${avgOrders}</td></tr>
+      <tr><td style="font-weight:600">Average Sales per Order</td><td>${avgOrder}</td></tr>
     </table>
     <div style="margin-top:24px;font-size:0.75rem;color:#888;text-align:center">
       Generated on ${new Date().toLocaleString('en-PH')}
     </div>
   `;
-
+        renderIcons();
     setTimeout(() => window.print(), 200);
 }
 
 //Step 31: Initialisation — Tie Everything Together
-window.addEventListener('DOMContentLoaded', async () => {
+let dashboardReady = false;
 
-  // Auth guard — same as before
-  const username = localStorage.getItem('lm_current_user');
-  if (!username) {
-    window.location.href = 'index.html';
-    return;
-  }
+window.addEventListener('DOMContentLoaded', () => {
+    auth.onAuthStateChanged(async (firebaseUser) => {
+        if (!firebaseUser) return;       // auth.js's checkAuthState() already redirects to index.html
+        if (dashboardReady) return;      // onAuthStateChanged can fire more than once
+        dashboardReady = true;
 
-  // Fill sidebar name — same as before
-  const users = JSON.parse(localStorage.getItem('lm_users') || '[]');
-  const user = users.find(u => u.username === username);
-  if (user) {
-    const nameEl = document.getElementById('sidebar-name');
-    const avatarEl = document.getElementById('sidebar-avatar');
-    if (nameEl) nameEl.textContent = user.firstName + ' ' + user.lastName;
-    if (avatarEl) avatarEl.textContent = user.firstName[0] + user.lastName[0];
-  }
+        // Fill sidebar name from the admin's profile stored in Firebase
+        const snap = await db.ref('admins/' + firebaseUser.uid).once('value');
+        const admin = snap.val();
+        if (admin) {
+            const nameEl = document.getElementById('sidebar-name');
+            const avatarEl = document.getElementById('sidebar-avatar');
+            if (nameEl) nameEl.textContent = admin.firstName + ' ' + admin.lastName;
+            if (avatarEl) avatarEl.textContent = admin.firstName[0] + admin.lastName[0];
+        }
 
-  // Load data from Firebase instead of hardcoded arrays
-  await loadOrders();
-  await loadSettingsIntoForm();
-  await loadPendingCustomers();
-  renderWeightHistory();
-  renderReadings();
+        renderIcons(); // activates any icon() placeholders already in the static HTML
 
-  startLiveWeight();
+        // Load data from Firebase instead of hardcoded arrays
+        await loadOrders();
+        await loadSettingsIntoForm();
+        await loadPendingCustomers();
+        renderWeightHistory();
+        renderReadings();
 
-  // Listen for realtime order updates
-  // This updates your table automatically when any order changes
-    listenToOrders(orders => {
-        allOrdersCache = orders;
+        startLiveWeight();
 
-        const mapped = orders.map(o => ({
-            id:       o.transactionCode,
-            customer: o.customerName,
-            weight:   o.kg,
-            service:  o.service,
-            status:   o.status,
-            time:     o.timeIn,
-            orderId:  o.id,
-        }));
+        // Listen for realtime order updates
+        // This updates your table automatically when any order changes
+        listenToOrders(orders => {
+            allOrdersCache = orders;
 
-        renderOrders('orders-body',      mapped.slice(0, 10));
-        renderOrders('orders-body-full', mapped);
+            const mapped = orders.map(o => ({
+                id: o.transactionCode,
+                customer: o.customerName,
+                weight: o.kg,
+                service: o.service,
+                status: o.status,
+                time: o.timeIn,
+                orderId: o.id,
+            }));
 
-        updateDashboardKPIs(orders);
-        updateStatusOverview(orders);
-        renderTopCustomers(orders);
-        renderRecords(orders);
-        renderDashboardChart(currentChartView);
-    });
+            renderOrders('orders-body', mapped.slice(0, 10));
+            renderOrders('orders-body-full', mapped);
 
-    // Live notifications feed — attached once, here, alongside the
-    // orders listener. Fires immediately with current data on
-    // attach, then again on every future change — same pattern as
-    // listenToOrders, so there's no separate "initial load" call
-    // needed and no risk of a duplicate listener being attached.
-    listenToAllNotifications(notifications => {
-        allNotificationsCache = notifications;
-        renderNotifications(notifications);
+            updateDashboardKPIs(orders);
+            updateStatusOverview(orders);
+            updateUnclaimedLaundry(orders);
+            renderTopCustomers(orders);
+            renderRecords(orders);
+            renderDashboardChart(currentChartView);
+        });
 
-        const unreadCount = notifications.filter(n => !n.read).length;
-        const badge = document.getElementById('notif-badge');
-        if (badge) badge.textContent = unreadCount;
-    });
+        // Live notifications feed — attached once, here, alongside the
+        // orders listener. Fires immediately with current data on
+        // attach, then again on every future change — same pattern as
+        // listenToOrders, so there's no separate "initial load" call
+        // needed and no risk of a duplicate listener being attached.
+        listenToAllNotifications(notifications => {
+            allNotificationsCache = notifications;
+            renderNotifications(notifications);
 
-  // Modal events — same as before
-  document.getElementById('form-weight-input').addEventListener('input', updateCost);
-  document.getElementById('form-service').addEventListener('change', updateCost);
-  document.getElementById('modal').addEventListener('click', function (e) {
-    if (e.target === this) closeModal();
-  });
+            const unreadCount = notifications.filter(n => !n.read).length;
+            const badge = document.getElementById('notif-badge');
+            if (badge) badge.textContent = unreadCount;
+        });
 
-  //close the customer dropdown when clicking anywhere outside it
-  document.addEventListener('click', function (e) {
-    const dropdown = document.getElementById('customer-dropdown');
-    const searchInput = document.getElementById('customer-search');
-    if (dropdown && !dropdown.contains(e.target) && e.target !== searchInput) {
-      dropdown.style.display = "none";
-    }
-  });
+        // Modal events — same as before
+        document.getElementById('form-weight-input').addEventListener('input', updateCost);
+        document.getElementById('form-service').addEventListener('change', updateCost);
+        document.getElementById('modal').addEventListener('click', function (e) {
+            if (e.target === this) closeModal();
+        });
 
-    // ── GLOBAL AUTO-CAPTURE — Customer/Job Order Scanning ────────
+        //close the customer dropdown when clicking anywhere outside it
+        document.addEventListener('click', function (e) {
+            const dropdown = document.getElementById('customer-dropdown');
+            const searchInput = document.getElementById('customer-search');
+            if (dropdown && !dropdown.contains(e.target) && e.target !== searchInput) {
+                dropdown.style.display = "none";
+            }
+        });
+
+        // ── GLOBAL AUTO-CAPTURE — Customer/Job Order Scanning ────────
 // The admin can pick up the scanner and scan from ANY screen in
 // the app, with zero clicks. The instant a keystroke arrives and
 // nothing else is actively being typed into, we silently redirect
 // it into the scan input. If the admin IS typing in any other
 // field anywhere (a form, a search box, a modal) we back off
 // completely and leave that field alone.
-    document.addEventListener('keydown', function (e) {
-        const scanInput = document.getElementById('scan-input');
-        if (!scanInput) return;
+        document.addEventListener('keydown', function (e) {
+            const scanInput = document.getElementById('scan-input');
+            if (!scanInput) return;
 
-        const active = document.activeElement;
-        const tag    = active ? active.tagName : '';
-        const isEditableFocused = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+            const active = document.activeElement;
+            const tag = active ? active.tagName : '';
+            const isEditableFocused = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
 
-        if (isEditableFocused) return;
+            if (isEditableFocused) return;
 
-        if (e.key.length === 1) {
-            scanInput.focus();
-        }
-    });
+            if (e.key.length === 1) {
+                scanInput.focus();
+            }
+        });
 
-    // ── AUTO-CAPTURE SCANNER INPUT — Pending Validation Modal ────
+        // ── AUTO-CAPTURE SCANNER INPUT — Pending Validation Modal ────
 // Removes the requirement to manually click into the scan field.
 // The instant a keystroke arrives while this modal is open, we
 // redirect focus into the scan input first — so it doesn't matter
 // what (or nothing) had focus when the admin started scanning.
-    document.addEventListener('keydown', function (e) {
-        const modal = document.getElementById('pending-modal');
-        if (!modal || !modal.classList.contains('open')) return;
+        document.addEventListener('keydown', function (e) {
+            const modal = document.getElementById('pending-modal');
+            if (!modal || !modal.classList.contains('open')) return;
 
-        const input = document.getElementById('validation-scan-input');
-        if (!input || document.activeElement === input) return;
+            const input = document.getElementById('validation-scan-input');
+            if (!input || document.activeElement === input) return;
 
-        // Only redirect on printable characters — leaves Tab, Escape,
-        // and button-activation keys (Space/Enter) completely alone
-        if (e.key.length === 1) {
-            input.focus();
-        }
-    });
+            // Only redirect on printable characters — leaves Tab, Escape,
+            // and button-activation keys (Space/Enter) completely alone
+            if (e.key.length === 1) {
+                input.focus();
+            }
+        });
 
-    // ── SCANNER-FRIENDLY WORKFLOW — Enter submits, Escape cancels ──
+        // ── SCANNER-FRIENDLY WORKFLOW — Enter submits, Escape cancels ──
 // While the New Job Order modal is open AND a customer is already
 // selected, Enter submits immediately — no mouse required. The
 // selectedCustomer check is a safety net: it stops a stray Enter
 // from submitting a blank order if the modal was opened manually
 // and no customer has been chosen yet.
-    document.addEventListener('keydown', function (e) {
-        const modal = document.getElementById('modal');
-        if (!modal || !modal.classList.contains('open')) return;
+        document.addEventListener('keydown', function (e) {
+            const modal = document.getElementById('modal');
+            if (!modal || !modal.classList.contains('open')) return;
 
-        if (e.key === 'Enter' && selectedCustomer && !isSubmittingOrder) {
-            e.preventDefault();
-            submitOrder();
-        }
+            if (e.key === 'Enter' && selectedCustomer && !isSubmittingOrder) {
+                e.preventDefault();
+                submitOrder();
+            }
 
-        if (e.key === 'Escape') {
-            closeModal();
-        }
-    });
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+    }); // closes auth.onAuthStateChanged
 });

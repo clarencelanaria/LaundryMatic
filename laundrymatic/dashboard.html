@@ -17,7 +17,7 @@
 
         <div class="logo">
             <div class="logo-mark">
-                <div class="logo-icon">🧺</div>
+                <img src="assets/laundrymatic-logo.png">
                 <div>
                     LaundryMatic
                     <span class="logo-tag">IoT System</span>
@@ -28,30 +28,44 @@
         <nav class="nav">
             <span class="nav-label">Main</span>
             <div class="nav-item active" onclick="showPage('dashboard', this)">
-                <span class="icon">⊞</span> Dashboard
+                <span class="icon">
+                    <i data-lucide="layout-dashboard"></i>
+                </span> Dashboard
             </div>
             <div class="nav-item" onclick="showPage('orders', this)">
-                <span class="icon">📋</span> Job Orders
+                <span class="icon">
+                    <i data-lucide="clipboard-list"></i>
+                </span> Job Orders
                 <span class="nav-badge" id="orders-badge">12</span>
             </div>
 
             <div class="nav-item" onclick="showPage('records', this)">
-                <span class="icon">🗂</span> Records
+                <span class="icon">
+                    <i data-lucide="archive"></i>
+                </span> Records
             </div>
             <div class="nav-item" onclick="showPage('reports', this)">
-                <span class="icon">📊</span> Reports
+                <span class="icon">
+                    <i data-lucide="chart-column"></i>
+                </span> Reports
             </div>
             <div class="nav-item" onclick="showPage('customers', this)">
-                <span class="icon">👥</span> Customers
+                <span class="icon">
+                    <i data-lucide="users"></i>
+                </span> Customers
             </div>
 
             <span class="nav-label">System</span>
             <div class="nav-item" onclick="showPage('notifications', this)">
-                <span class="icon">🔔</span> Notifications
+                <span class="icon">
+                    <i data-lucide="bell"></i>
+                </span> Notifications
                 <span class="nav-badge" id="notif-badge">0</span>
             </div>
             <div class="nav-item" onclick="showPage('settings', this)">
-                <span class="icon">⚙</span> Settings
+                <span class="icon">
+                    <i data-lucide="settings"></i>
+                </span> Settings
             </div>
         </nav>
 
@@ -63,7 +77,9 @@
                     <div class="admin-role">LaundryMatic HQ</div>
                 </div>
                 <!-- Logout button sits beside the admin info -->
-                <button class="logout-btn" onclick="handleLogout()" title="Sign out">⏻</button>
+                <button class="logout-btn" onclick="handleLogout()" title="Sign out">
+                    <i data-lucide="log-out"></i>
+                </button>
             </div>
         </div>
 
@@ -89,13 +105,17 @@
 
                 <!-- Always-visible live weight — replaces the old removed gauge widget -->
                 <div class="live-weight-pill" id="topbar-weight-pill">
-                    <span class="live-weight-pill-icon">⚖</span>
+                    <span class="live-weight-pill-icon">
+                        <i data-lucide="scale"></i>
+                    </span>
                     <span class="live-weight-pill-value" id="topbar-live-weight">0.00</span>
                     <span class="live-weight-pill-unit">kg</span>
                 </div>
 
-                <button class="btn btn-ghost" onclick="openModal()">+ New Job Order</button>
-                <button class="btn btn-primary" onclick="refreshWeight()">↻ Refresh</button>
+                <button class="btn btn-ghost" onclick="openModal()">
+                    <i data-lucide="plus"></i> New Job Order</button>
+                <button class="btn btn-primary" onclick="refreshWeight()">
+                    <i data-lucide="rotate-cw"></i> Refresh</button>
             </div>
         </div>
 
@@ -126,6 +146,20 @@
                 </div>
             </div>
 
+            <div class="unclaimed-ribbon" id="unclaimed-ribbon" onclick="toggleUnclaimedList()">
+                <div class="unclaimed-ribbon-left">
+                    <span class="unclaimed-ribbon-icon">
+                        <i data-lucide="baggage-claim"></i>
+                    </span>
+                    <span class="unclaimed-ribbon-text">Unclaimed Laundry</span>
+                </div>
+                <div class="unclaimed-ribbon-right">
+                    <span class="unclaimed-ribbon-count" id="unclaimed-count">0</span>
+                    <span class="unclaimed-ribbon-arrow" id="unclaimed-arrow">▾</span>
+                </div>
+            </div>
+            <div class="unclaimed-list" id="unclaimed-list" style="display:none"></div>
+
             <div class="overview-section">
 
                 <!-- LEFT: Status Overview with legend -->
@@ -138,29 +172,18 @@
                     </div>
 
                     <div class="status-legend">
-                        <div class="legend-item"><span class="legend-dot" style="background:var(--accent3)"></span>Pending</div>
-                        <div class="legend-item"><span class="legend-dot" style="background:var(--accent2)"></span>Washing</div>
-                        <div class="legend-item"><span class="legend-dot" style="background:var(--accent)"></span>Ready</div>
-                        <div class="legend-item"><span class="legend-dot" style="background:var(--muted2)"></span>Picked Up</div>
-                        <div class="legend-item"><span class="legend-dot" style="background:var(--danger)"></span>Cancelled</div>
+                        <div class="legend-item"><span class="legend-dot" style="background:var(--accent2)"></span>On-Going</div>
+                        <div class="legend-item"><span class="legend-dot" style="background:var(--accent)"></span>Ready for Pick-Up</div>
                     </div>
 
-                    <div class="status-count-grid">
+                    <div class="status-count-grid" style="grid-template-columns: repeat(2, 1fr)">
                         <div class="status-count-item ongoing">
                             <div class="status-count-num" id="count-ongoing">0</div>
-                            <div class="status-count-label">On-going</div>
+                            <div class="status-count-label">On-Going</div>
                         </div>
                         <div class="status-count-item ready">
                             <div class="status-count-num" id="count-ready">0</div>
-                            <div class="status-count-label">Ready</div>
-                        </div>
-                        <div class="status-count-item picked">
-                            <div class="status-count-num" id="count-picked">0</div>
-                            <div class="status-count-label">Picked Up</div>
-                        </div>
-                        <div class="status-count-item all">
-                            <div class="status-count-num" id="count-all">0</div>
-                            <div class="status-count-label">All Status</div>
+                            <div class="status-count-label">Ready for Pick-Up</div>
                         </div>
                     </div>
                 </div>
@@ -190,7 +213,8 @@
                         <div class="card-subtitle">Last 10 transactions</div>
                     </div>
                     <div class="table-search">
-                        🔍 <input type="text" placeholder="Search orders..." oninput="filterTable(this.value)">
+                        <i data-lucide="search"></i>
+                         <input type="text" placeholder="Search orders..." oninput="filterTable(this.value)">
                     </div>
                 </div>
                 <table>
@@ -223,9 +247,11 @@
                     </div>
                     <div style="display:flex;gap:10px;align-items:center">
                         <div class="table-search">
-                            🔍 <input type="text" placeholder="Search..." oninput="filterTable(this.value)">
+                            <i data-lucide="search"></i>
+                             <input type="text" placeholder="Search..." oninput="filterTable(this.value)">
                         </div>
-                        <button class="btn btn-primary" onclick="openModal()">+ New Job Order</button>
+                        <button class="btn btn-primary" onclick="openModal()">
+                            <i data-lucide="plus"></i> New Job Order</button>
                     </div>
                 </div>
                 <table>
@@ -283,7 +309,7 @@
                     <button class="tab-pill"        id="report-tab-yearly"  onclick="setReportPeriod('yearly', this)">Yearly</button>
                     <button class="tab-pill"        id="report-tab-custom"  onclick="setReportPeriod('custom', this)">Custom</button>
                 </div>
-                <button class="btn btn-ghost" onclick="printReport()">🖨 Print Report</button>
+                <button class="btn btn-ghost" onclick="printReport()"><i data-lucide="printer"></i> Print Report</button>
             </div>
 
             <!-- Custom date range — only shown when Custom tab is active -->
@@ -303,7 +329,7 @@
 
             <div class="report-period-label" id="report-period-label">Today</div>
 
-            <div class="kpi-grid" style="margin-bottom:20px">
+            <div class="kpi-grid" id="report-kpi-grid" style="margin-bottom:20px">
                 <div class="kpi green">
                     <div class="kpi-label">Total Job Orders</div>
                     <div class="kpi-value" id="report-total-orders">0</div>
@@ -313,12 +339,27 @@
                     <div class="kpi-value" id="report-total-weight">0.0</div>
                 </div>
                 <div class="kpi orange">
-                    <div class="kpi-label">Total Revenue</div>
-                    <div class="kpi-value" id="report-total-revenue">₱0</div>
+                    <div class="kpi-label">Total Sales</div>
+                    <div class="kpi-value" id="report-total-revenue">₱0.00</div>
+                    <div class="kpi-sub">Paid &amp; already picked up</div>
                 </div>
                 <div class="kpi red">
-                    <div class="kpi-label">Avg. per Order</div>
-                    <div class="kpi-value" id="report-avg-order">₱0</div>
+                    <div class="kpi-label">Total Collectibles</div>
+                    <div class="kpi-value" id="report-total-collectibles">0</div>
+                    <div class="kpi-sub">Customers who picked up</div>
+                </div>
+                <div class="kpi green">
+                    <div class="kpi-label">Grand Total</div>
+                    <div class="kpi-value" id="report-grand-total">₱0.00</div>
+                    <div class="kpi-sub">All job orders, any status</div>
+                </div>
+                <div class="kpi blue">
+                    <div class="kpi-label" id="report-avg-orders-label">Avg. Job Orders</div>
+                    <div class="kpi-value" id="report-avg-orders">0</div>
+                </div>
+                <div class="kpi orange">
+                    <div class="kpi-label">Avg. Sales per Order</div>
+                    <div class="kpi-value" id="report-avg-order">₱0.00</div>
                 </div>
             </div>
 
@@ -362,15 +403,11 @@
                     <div style="padding:20px 22px">
                         <div class="form-group">
                             <label class="form-label">Rate per kilogram (₱)</label>
-                            <input class="form-input" type="number" value="65">
+                            <input class="form-input" type="number" step="0.01" id="rate-input" value="65.00">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Minimum charge (₱)</label>
-                            <input class="form-input" type="number" value="50">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Minimum weight per transaction (kg)</label>
-                            <input class="form-input" type="number" step="0.1" id="min-weight-input" value="3">
+                            <label class="form-label">Minimum price per transaction (₱)</label>
+                            <input class="form-input" type="number" step="0.01" id="min-charge-input" value="75.00">
                         </div>
                         <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
                     </div>
@@ -396,11 +433,11 @@
                 </div>
                 <div style="display:flex;gap:10px">
                     <button class="btn btn-ghost" onclick="openPendingModal()">
-                        ⏳ Pending
+                        <i data-lucide="hourglass"></i> Pending
                         <span class="nav-badge" id="pending-badge" style="margin-left:6px">0</span>
                     </button>
                     <button class="btn btn-primary" onclick="openRegisterModal()">
-                        + Register Walk-in
+                        <i data-lucide="plus"></i> Register Walk-in
                     </button>
                 </div>
             </div>
@@ -409,7 +446,8 @@
             <div class="table-card">
                 <div class="table-head">
                     <div class="table-search">
-                        🔍 <input type="text" placeholder="Search customers..."
+                        <i data-lucide="search"></i>
+                        <input type="text" placeholder="Search customers..."
                             oninput="filterCustomerTable(this.value)">
                     </div>
                     <button class="btn btn-ghost" style="font-size:0.8rem" onclick="loadApprovedCustomers()">
@@ -441,7 +479,9 @@
         <div class="modal">
             <div class="modal-title">
                 New Job Order
-                <button class="modal-close" onclick="closeModal()">✕</button>
+                <button class="modal-close" onclick="closeModal()">
+                    <i data-lucide="x"></i>
+                </button>
             </div>
 
             <!-- ── CUSTOMER SEARCH ─────────────────────────────── -->
@@ -455,7 +495,9 @@
                         autocomplete="off">
                     <!-- Clear button — shown when a customer is selected -->
                     <button class="search-clear-btn" id="customer-clear" onclick="clearCustomerSelection()"
-                        style="display:none">✕</button>
+                        style="display:none">
+                        <i data-lucide="x"></i>
+                    </button>
                 </div>
 
                 <!-- Dropdown results list -->
@@ -470,7 +512,9 @@
                         <div class="selected-name" id="selected-name">Clarence Lanaria</div>
                         <div class="selected-contact" id="selected-contact">09171234567</div>
                     </div>
-                    <span class="selected-check">✓</span>
+                    <span class="selected-check">
+                        <i data-lucide="circle-check-big"></i>
+                    </span>
                 </div>
 
             </div>
@@ -510,6 +554,15 @@
                 </select>
             </div>
 
+            <!-- ── PAYMENT ──────────────────────────────────────── -->
+            <div class="form-group">
+                <label class="form-label">Payment</label>
+                <div class="payment-toggle">
+                    <button type="button" class="payment-option-btn active" id="pay-later-btn" onclick="setPaymentOption('later')">Pay Later</button>
+                    <button type="button" class="payment-option-btn" id="pay-now-btn" onclick="setPaymentOption('now')">Pay Now</button>
+                </div>
+            </div>
+
             <!-- ── NOTES ────────────────────────────────────────── -->
             <div class="form-group">
                 <label class="form-label">Notes</label>
@@ -538,9 +591,11 @@
                 Job Order Receipt
                 <div style="display:flex;gap:8px">
                     <button class="btn btn-primary" onclick="printReceipt()">
-                        🖨 Print
+                        <i data-lucide="printer"></i> Print
                     </button>
-                    <button class="modal-close" onclick="closeReceiptModal()">✕</button>
+                    <button class="modal-close" onclick="closeReceiptModal()">
+                        <i data-lucide="x"></i>
+                    </button>
                 </div>
             </div>
 
@@ -549,7 +604,9 @@
 
                 <!-- Shop header -->
                 <div class="receipt-header">
-                    <div class="receipt-logo">🧺</div>
+                    <div class="receipt-logo">
+                        <i data-lucide="washing-machine"></i>
+                    </div>
                     <div class="receipt-shop-name">LaundryMatic</div>
                     <div class="receipt-shop-sub">
                         Smart Weighing &amp; Recording System
@@ -613,7 +670,7 @@
                     </div>
                     <div class="receipt-row">
                         <span class="receipt-label">Rate</span>
-                        <span class="receipt-value">₱65.00 / kg</span>
+                        <span class="receipt-value" id="r-rate">₱65.00 / kg</span>
                     </div>
                 </div>
 
@@ -624,7 +681,12 @@
                 <!-- Amount -->
                 <div class="receipt-total-section">
                     <span class="receipt-total-label">TOTAL AMOUNT</span>
-                    <span class="receipt-total-value" id="r-amount">₱0</span>
+                    <span class="receipt-total-value" id="r-amount">₱0.00</span>
+                </div>
+
+                <div class="receipt-row" style="margin-top:6px">
+                    <span class="receipt-label">Payment Status</span>
+                    <span class="receipt-value accent" id="r-payment-status">—</span>
                 </div>
 
                 <div class="receipt-divider">
@@ -687,12 +749,16 @@
 
             <div class="modal-title">
                 Scanned Job Order
-                <button class="modal-close" onclick="closeOrderScanModal()">✕</button>
+                <button class="modal-close" onclick="closeOrderScanModal()">
+                    <i data-lucide="x"></i>
+                </button>
             </div>
 
             <!-- Status banner — color changes based on order status -->
             <div class="scan-status-banner" id="scan-status-banner">
-                <span id="scan-status-icon">⏳</span>
+                <span id="scan-status-icon">
+                    <i data-lucide="hourglass"></i>
+                </span>
                 <span id="scan-status-label">Pending</span>
             </div>
 
@@ -726,7 +792,7 @@
 
             <!-- Est. pickup row -->
             <div class="scan-eta-row" id="scan-eta-row">
-                <span>⏰ Estimated finish:</span>
+                <span><i data-lucide="alarm-clock"></i> Estimated finish:</span>
                 <span id="scan-eta">—</span>
             </div>
 
@@ -747,7 +813,9 @@
 
             <div class="modal-title">
                 Customer Profile
-                <button class="modal-close" onclick="closeProfileScanModal()">✕</button>
+                <button class="modal-close" onclick="closeProfileScanModal()">
+                    <i data-lucide="x"></i>
+                </button>
             </div>
 
             <!-- Customer info card -->
@@ -809,7 +877,7 @@
             <div style="margin-top:16px">
                 <button class="btn btn-primary" style="width:100%;justify-content:center"
                     onclick="createOrderFromProfileScan()">
-                    + New Job Order for this Customer
+                    <i data-lucide="plus"></i> New Job Order for this Customer
                 </button>
             </div>
 
@@ -821,7 +889,9 @@
         <div class="modal">
             <div class="modal-title">
                 Register Walk-in Customer
-                <button class="modal-close" onclick="closeRegisterModal()">✕</button>
+                <button class="modal-close" onclick="closeRegisterModal()">
+                    <i data-lucide="x"></i>
+                </button>
             </div>
             <div class="card-subtitle" style="margin-bottom:20px">
                 Staff registers customers who don't use the mobile app.
@@ -879,7 +949,9 @@
         <div class="modal" style="width:700px;max-width:95vw">
             <div class="modal-title">
                 Pending Validation
-                <button class="modal-close" onclick="closePendingModal()">✕</button>
+                <button class="modal-close" onclick="closePendingModal()">
+                    <i data-lucide="x"></i>
+                </button>
             </div>
 
             <!-- Thermal scanner input -->
@@ -925,7 +997,7 @@
         <div class="modal" style="width:560px;max-width:95vw">
             <div class="modal-title">
                 Customer Profile
-                <button class="modal-close" onclick="closeCustomerProfileModal()">✕</button>
+                <button class="modal-close" onclick="closeCustomerProfileModal()"><i data-lucide="x"></i></button>
             </div>
 
             <!-- Customer info card -->
@@ -981,11 +1053,11 @@
             <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
                 <button class="btn btn-ghost" onclick="showCustomerQRFromProfile()"
                     style="flex:1;justify-content:center">
-                    🖨 Print QR Card
+                    <i data-lucide="printer"></i> Print QR Card
                 </button>
                 <button class="btn btn-primary" onclick="createOrderFromProfile()"
                     style="flex:1;justify-content:center">
-                    + New Job Order
+                    <i data-lucide="plus"></i> New Job Order
                 </button>
             </div>
 
@@ -998,7 +1070,9 @@
         <div class="modal" style="text-align:center">
             <div class="modal-title">
                 QR Card Ready to Print
-                <button class="modal-close" onclick="closeQRResultModal()">✕</button>
+                <button class="modal-close" onclick="closeQRResultModal()">
+                    <i data-lucide="x"></i>
+                </button>
             </div>
             <div id="qr-result-code" style="margin:0 auto 16px;width:fit-content"></div>
             <div class="order-id" id="qr-result-name" style="font-size:1rem;margin-bottom:6px"></div>
@@ -1010,7 +1084,7 @@
             <div class="modal-footer" style="justify-content:center">
                 <button class="btn btn-ghost" onclick="closeQRResultModal()">Close</button>
                 <button class="btn btn-primary" onclick="printQR()">
-                    🖨 Print QR Card
+                    <i data-lucide="printer"></i> Print QR Card
                 </button>
             </div>
         </div>
@@ -1021,8 +1095,8 @@
         <div class="modal" style="width:500px;max-width:95vw">
 
             <div class="modal-title">
-                🧺 Ready for Pickup
-                <button class="modal-close" onclick="closePickupModal()">✕</button>
+                <i data-lucide="washing-machine"></i> Ready for Pickup
+                <button class="modal-close" onclick="closePickupModal()"><i data-lucide="x"></i></button>
             </div>
 
             <!-- Customer info strip -->
@@ -1061,7 +1135,7 @@
 
     <!-- TOAST -->
     <div class="toast" id="toast">
-        <span id="toast-icon">✅</span>
+        <span id="toast-icon"></span>
         <span id="toast-msg">Action completed</span>
     </div>
 
@@ -1081,12 +1155,18 @@
     <!-- PRINT REPORT AREA — only visible when printing -->
     <div id="print-report-area"></div>
 
-
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <!-- Firebase SDK — add these before app.js -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="firebase.js"></script>
+    <script src="auth.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
 
     <script src="app.js"></script>
 

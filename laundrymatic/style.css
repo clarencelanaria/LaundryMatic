@@ -58,7 +58,7 @@ body {
   display: flex;
   flex-direction: column;
   /* stack logo → nav → admin vertically */
-  padding: 28px 0;
+  padding: 28px 16px;
   height: 100vh;
   position: sticky;
   top: 0;
@@ -66,7 +66,7 @@ body {
 }
 
 .logo {
-  padding: 0 24px 28px;
+  padding-bottom: 24px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -79,7 +79,15 @@ body {
   font-size: 1.15rem;
 }
 
-.logp-icon {
+.logo-mark img {
+  width: 70px;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.logo-icon {
   width: 32px;
   height: 32px;
   background: var(--accent);
@@ -1356,7 +1364,7 @@ select.form-input option {
 }
 
 .auth-brand-logo {
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 }
 
 .auth-brand-name {
@@ -2609,4 +2617,145 @@ select.form-input option {
 
 .live-weight-pill.active .live-weight-pill-value {
   color: var(--accent);
+}
+
+.unclaimed-ribbon {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(244, 162, 74, 0.08);
+    border: 1px solid rgba(244, 162, 74, 0.25);
+    border-radius: var(--radius);
+    padding: 14px 20px;
+    margin-bottom: 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.unclaimed-ribbon:hover {
+    border-color: var(--accent3);
+}
+
+.unclaimed-ribbon-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-family: var(--font-head);
+    color: var(--text);
+}
+
+.unclaimed-ribbon-icon {
+    font-size: 1.1rem;
+}
+
+.unclaimed-ribbon-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.unclaimed-ribbon-count {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--accent3);
+    background: var(--surface);
+    border: 1px solid rgba(244, 162, 74, 0.3);
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 0.85rem;
+}
+
+.unclaimed-ribbon-arrow {
+    color: var(--muted2);
+    font-size: 0.8rem;
+}
+
+.unclaimed-list {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.unclaimed-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-bottom: 1px solid rgba(207, 230, 239, 0.72);
+    font-size: 0.85rem;
+}
+
+.unclaimed-item:last-child {
+    border-bottom: none;
+}
+
+.unclaimed-item-name {
+    font-weight: 600;
+    color: var(--text);
+}
+
+.unclaimed-item-count {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--muted2);
+}
+
+.unclaimed-empty {
+    text-align: center;
+    color: var(--muted2);
+    padding: 20px;
+    font-size: 0.82rem;
+}
+
+/* Payment toggle (New Job Order modal) */
+.payment-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.payment-option-btn {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--muted2);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.payment-option-btn.active {
+  border-color: var(--accent);
+  background: rgba(74, 244, 176, 0.1);
+  color: var(--accent);
+}
+
+/* Reports page — 3-column KPI layout for the 6 report cards */
+#report-kpi-grid {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+[data-lucide] {
+    width: var(--icon-size, 16px);
+    height: var(--icon-size, 16px);
+    vertical-align: -3px;
+}
+
+.auth-brand-logo {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.auth-brand-logo img {
+  width: 300px;
+  height: 300px;
+  object-fit: contain;
 }

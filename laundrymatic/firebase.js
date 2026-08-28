@@ -17,6 +17,7 @@ firebase.initializeApp(firebaseConfig);
 
 // Now db works correctly
 const db = firebase.database();
+const auth = firebase.auth();
 
 // ── HELPER FUNCTIONS ─────────────────────────────────────────
 
@@ -84,7 +85,7 @@ async function createOrder(userId, orderData) {
         orderId,
         userId,
         transactionCode: generateTransactionCode(),
-        status: 'pending',
+        status: 'washing',
         dateIn,
         timeIn,
         estimatedFinish: finish.estimatedFinish,

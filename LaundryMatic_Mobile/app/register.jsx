@@ -5,15 +5,14 @@ import {
   View, Text, ScrollView,
   TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform,
+  Image,
 } from 'react-native';
 import AuthInput from '../components/AuthInput';
 import AuthButton from '../components/AuthButton';
 import Colors from '../constants/colors';
-import { registerCustomerMobile, checkDuplicateContact } from '../utils/firebase';
-import {
-  setCurrentUser, getUsers,
-  saveUsers, findUser
-} from '../utils/storage';
+import { AlertTriangle } from 'lucide-react-native';
+import { auth, registerCustomerMobile, checkDuplicateContact } from '../utils/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 // Password strength checker
 function getStrength(value) {
@@ -33,13 +32,7 @@ const strengthLevels = [
   { label: 'Strong', color: Colors.accent },
 ];
 
-const QUESTIONS = [
-  "What is your mother's maiden name?",
-  "What was the name of your first pet?",
-  "What city were you born in?",
-  "What is your favorite food?",
-  "What was the name of your first school?",
-];
+
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -52,8 +45,6 @@ export default function RegisterScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
-  const [questionIndex, setQuestionIndex] = useState(0);
-  const [answer, setAnswer] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -69,15 +60,12 @@ export default function RegisterScreen() {
     return value.replace(/\D/g, '').slice(0, 11);
   }
 
-  function cycleQuestion() {
-    setQuestionIndex(i => (i + 1) % QUESTIONS.length);
-  }
 
   async function handleRegister() {
     setError('');
 
     if (!firstName || !lastName || !contact1 || !address ||
-        !username  || !password || !confirm  || !answer) {
+        !username  || !password || !confirm) {
       setError('Please fill in all required fields.');
       return;
     }
@@ -108,13 +96,6 @@ export default function RegisterScreen() {
     setLoading(true);
 
     try {
-      const existing = await findUser(username);
-      if (existing) {
-        setError('That username is already taken.');
-        setLoading(false);
-        return;
-      }
-
       // ── Duplicate contact check against Firebase ─────────────
       const duplicateCustomer = await checkDuplicateContact(contact1);
       if (duplicateCustomer) {
@@ -123,38 +104,25 @@ export default function RegisterScreen() {
         return;
       }
 
-      const userId = await registerCustomerMobile({
+      // "username" holds an email — this creates the real Firebase Auth account
+      const cred = await createUserWithEmailAndPassword(auth, username, password);
+
+      // Customer profile keyed by the same uid as the auth account
+      await registerCustomerMobile(cred.user.uid, {
         firstName, lastName, contact1, contact2,
         address, fbAccount,
-        status: 'pending',
       });
-
-      // Save login credentials to local storage (AsyncStorage)
-      const users = await getUsers();
-      users.push({
-        username,
-        password,
-        firstName,
-        lastName,
-        question: QUESTIONS[questionIndex],
-        answer,
-        firebaseId: userId,   // link local account to Firebase record
-      });
-      await saveUsers(users);
-
-      // Log in immediately
-      await setCurrentUser(username);
 
       setLoading(false);
 
       // Go to QR screen — pass the userId so it can display the QR
       router.replace({
         pathname: '/showQR',
-        params: { userId, firstName, lastName, contact1 }
+        params: { userId: cred.user.uid, firstName, lastName, contact1 }
       });
 
     } catch (err) {
-      setError('Registration failed. Check your connection.');
+      setError(err.message || 'Registration failed. Check your connection.');
       console.error(err);
       setLoading(false);
     }
@@ -172,7 +140,11 @@ export default function RegisterScreen() {
         {/* Brand header */}
         <View style={styles.brand}>
           <View style={styles.logoBox}>
-            <Text style={styles.logoEmoji}>🧺</Text>
+            <Image
+                source={require('../assets/images/laundrymatic-logo.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+            />
           </View>
           <Text style={styles.brandName}>LaundryMatic</Text>
           <Text style={styles.brandTag}>Create your account</Text>
@@ -185,9 +157,10 @@ export default function RegisterScreen() {
           </Text>
 
           {error ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>⚠ {error}</Text>
-            </View>
+              <View style={styles.errorBox}>
+                <AlertTriangle color={Colors.danger} size={15} style={styles.errorIcon} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
           ) : null}
 
           {/* Name row */}
@@ -248,10 +221,12 @@ export default function RegisterScreen() {
           </View>
 
           <AuthInput
-            label="Username"
-            placeholder="Choose a username"
-            value={username}
-            onChangeText={setUsername}
+              label="Email"
+              placeholder="you@example.com"
+              value={username}
+              onChangeText={setUsername}
+              keyboardType="email-address"
+              autoCapitalize="none"
           />
 
           <AuthInput
@@ -291,27 +266,6 @@ export default function RegisterScreen() {
             secureText={true}
           />
 
-          {/* Security question */}
-          <View style={styles.questionWrap}>
-            <Text style={styles.qLabel}>SECURITY QUESTION</Text>
-            <TouchableOpacity
-              style={styles.questionSelector}
-              onPress={cycleQuestion}
-            >
-              <Text style={styles.questionText}>
-                {QUESTIONS[questionIndex]}
-              </Text>
-              <Text style={styles.questionArrow}>↓ tap to change</Text>
-            </TouchableOpacity>
-          </View>
-
-          <AuthInput
-            label="Your Answer"
-            placeholder="Case-sensitive"
-            value={answer}
-            onChangeText={setAnswer}
-          />
-
           <AuthButton
             label="Register"
             onPress={handleRegister}
@@ -337,13 +291,15 @@ const styles = StyleSheet.create({
 
   brand: { alignItems: 'center', marginBottom: 28 },
   logoBox: {
-    width: 64, height: 64,
-    backgroundColor: Colors.accent,
+    width: 150, height: 150,
     borderRadius: 16,
     alignItems: 'center', justifyContent: 'center',
-    marginBottom: 14,
+    marginBottom: 8,
+    overflow: 'hidden',
   },
-  logoEmoji: { fontSize: 28 },
+  logoImage: {
+    width: 150, height: 150,
+  },
   brandName: {
     fontSize: 26, fontWeight: '800',
     color: Colors.text, letterSpacing: -0.5, marginBottom: 4,
@@ -365,11 +321,15 @@ const styles = StyleSheet.create({
   cardSubtitle: { fontSize: 13, color: Colors.muted2, marginBottom: 24 },
 
   errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     backgroundColor: 'rgba(244,74,106,0.08)',
     borderWidth: 1, borderColor: 'rgba(244,74,106,0.25)',
     borderRadius: 8, padding: 12, marginBottom: 16,
   },
-  errorText: { color: Colors.danger, fontSize: 13 },
+  errorIcon: { flexShrink: 0 },
+  errorText: { flex: 1, color: Colors.danger, fontSize: 13 },
 
   nameRow: { flexDirection: 'row', gap: 12 },
   nameField: { flex: 1 },
@@ -404,6 +364,7 @@ const styles = StyleSheet.create({
     borderRadius: 10, padding: 14,
   },
   questionText: { fontSize: 14, color: Colors.text, marginBottom: 4 },
+  questionArrowRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   questionArrow: { fontSize: 11, color: Colors.accent },
 
   footerRow: {

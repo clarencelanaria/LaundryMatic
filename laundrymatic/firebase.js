@@ -107,7 +107,7 @@ async function createOrder(userId, orderData) {
     // Send "received" notification to customer's mobile app
     if (userId) {
         await sendNotificationToUser(userId,
-            '🧺 Laundry Received',
+            'Laundry Received',
             `Your ${orderData.kg}kg laundry has been received. ` +
             `Estimated finish: ${finish.estimatedFinishTime} (${finish.hours} hrs).`,
             { orderId, type: 'received' }
@@ -149,7 +149,7 @@ async function updateOrderStatus(orderId, newStatus) {
 
         if (order && order.userId) {
             await sendNotificationToUser(order.userId,
-                '✅ Laundry Ready for Pickup!',
+                'Laundry Ready for Pickup!',
                 `Your laundry (${order.transactionCode}) is done and ready for pickup.`,
                 { orderId, type: 'ready' }
             );

@@ -6,11 +6,12 @@ import {
     StyleSheet, TouchableOpacity,
 } from 'react-native';
 import Colors from '../constants/colors';
+import { ArrowLeft, Shirt, CheckCircle2, Bell } from 'lucide-react-native';
 import {
     listenToNotifications,
     markNotificationRead,
 } from '../utils/notifications';
-import { getCurrentUser, getUsers } from '../utils/storage';
+import { auth } from '../utils/firebase';
 
 export default function NotificationsScreen() {
     const router = useRouter();
@@ -18,22 +19,14 @@ export default function NotificationsScreen() {
     const [userId, setUserId] = useState(null);
 
     useEffect(() => {
-        let unsubscribe;
+        const uid = auth.currentUser?.uid;
+        if (!uid) return;
 
-        async function init() {
-            const username = await getCurrentUser();
-            const users = await getUsers();
-            const localUser = users.find(u => u.username === username);
-            const uid = localUser?.firebaseId;
+        setUserId(uid);
 
-            if (!uid) return;
-            setUserId(uid);
-
-            unsubscribe = listenToNotifications(uid, incoming => {
-                setNotifs(incoming);
-            });
-        }
-        init();
+        const unsubscribe = listenToNotifications(uid, incoming => {
+            setNotifs(incoming);
+        });
 
         return () => {
             if (unsubscribe)
@@ -49,9 +42,9 @@ export default function NotificationsScreen() {
 
     // Icon per notification type
     const icons = {
-        received: '🧺',
-        ready: '✅',
-        default: '🔔',
+        received: Shirt,
+        ready: CheckCircle2,
+        default: Bell,
     };
 
     return (
@@ -62,7 +55,7 @@ export default function NotificationsScreen() {
                     onPress={() => router.back()}
                     style={styles.backBtn}
                 >
-                    <Text style={styles.backIcon}>←</Text>
+                    <ArrowLeft color={Colors.text} size={18} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Notifications</Text>
             </View>
@@ -79,9 +72,10 @@ export default function NotificationsScreen() {
                             style={styles.card}
                             onPress={() => handleRead(n.id)}
                         >
-                            <Text style={styles.icon}>
-                                {icons[n.data?.type] || icons.default}
-                            </Text>
+                            {(() => {
+                                const NotifIcon = icons[n.data?.type] || icons.default;
+                                return <NotifIcon color={Colors.text} size={20} style={{ marginTop: 1 }} />;
+                            })()}
                             <View style={styles.body}>
                                 <Text style={styles.title}>{n.title}</Text>
                                 <Text style={styles.bodyText}>{n.body}</Text>

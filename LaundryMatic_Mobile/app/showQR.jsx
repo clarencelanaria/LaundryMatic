@@ -5,9 +5,11 @@ import * as Brightness from 'expo-brightness';
 import {
     View, Text, StyleSheet,
     ScrollView, TouchableOpacity,
+    Image,
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import Colors from '../constants/colors';
+import { Hourglass, ArrowRight } from 'lucide-react-native';
 
 export default function ShowQRScreen() {
     const router = useRouter();
@@ -45,7 +47,11 @@ export default function ShowQRScreen() {
         >
             {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.logoEmoji}>🧺</Text>
+                <Image
+                    source={require('../assets/images/laundrymatic-logo.png')}
+                    style={styles.logoImage}
+                    resizeMode="contain"
+                />
                 <Text style={styles.headerTitle}>Registration Successful!</Text>
                 <Text style={styles.headerSub}>
                     Your personal QR code has been generated
@@ -81,7 +87,7 @@ export default function ShowQRScreen() {
 
             {/* Pending notice */}
             <View style={styles.noticeCard}>
-                <Text style={styles.noticeIcon}>⏳</Text>
+                <Hourglass color={Colors.accent3} size={22} />
                 <View style={styles.noticeBody}>
                     <Text style={styles.noticeTitle}>
                         Waiting for Admin Validation
@@ -140,7 +146,10 @@ export default function ShowQRScreen() {
                 style={styles.continueBtn}
                 onPress={() => router.replace('/dashboard')}
             >
-                <Text style={styles.continueBtnText}>Continue to App →</Text>
+                <View style={styles.continueBtnRow}>
+                    <Text style={styles.continueBtnText}>Continue to App</Text>
+                    <ArrowRight color="#ffffff" size={16} />
+                </View>
             </TouchableOpacity>
 
         </ScrollView>
@@ -152,7 +161,7 @@ const styles = StyleSheet.create({
     scroll: { padding: 24, paddingTop: 56 },
 
     header: { alignItems: 'center', marginBottom: 28 },
-    logoEmoji: { fontSize: 40, marginBottom: 12 },
+    logoImage: { width: 100, height: 100, marginBottom: 12 },
     headerTitle: {
         fontSize: 22, fontWeight: '800',
         color: Colors.text, marginBottom: 6, letterSpacing: -0.3,
@@ -239,6 +248,9 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.accent,
         borderRadius: 12, padding: 14,
         alignItems: 'center',
+    },
+    continueBtnRow: {
+        flexDirection: 'row', alignItems: 'center', gap: 6,
     },
     continueBtnText: {
         fontSize: 15, fontWeight: '700', color: '#ffffff',

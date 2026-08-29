@@ -7,24 +7,23 @@ import {
   View, Text, StyleSheet,
   TouchableOpacity, ScrollView,
   ActivityIndicator, RefreshControl,
+    Image,
 } from 'react-native';
 import Colors from '../constants/colors';
 import {
-  clearCurrentUser, getCurrentUser,
-  getUsers
-} from '../utils/storage';
-import {
-  getOrdersForUser,
-  getCustomerById
-} from '../utils/firebase';
+    Hourglass, RefreshCw, CheckCircle2, Package, XCircle,
+    Shirt, Bell, Power, Smartphone, Clock,
+} from 'lucide-react-native';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth, getOrdersForUser, getCustomerById } from '../utils/firebase';
 
 // Status display config
 const STATUS_CONFIG = {
-  pending: { label: 'Pending', color: Colors.accent3, icon: '⏳' },
-  washing: { label: 'Washing', color: Colors.accent2, icon: '🌀' },
-  ready: { label: 'Ready!', color: Colors.accent, icon: '✅' },
-  picked: { label: 'Picked Up', color: Colors.muted2, icon: '📦' },
-  cancelled: { label: 'Cancelled', color: Colors.danger, icon: '✕' },
+    pending: { label: 'Pending', color: Colors.accent3, icon: Hourglass },
+    washing: { label: 'Washing', color: Colors.accent2, icon: RefreshCw },
+    ready: { label: 'Ready!', color: Colors.accent, icon: CheckCircle2 },
+    picked: { label: 'Picked Up', color: Colors.muted2, icon: Package },
+    cancelled: { label: 'Cancelled', color: Colors.danger, icon: XCircle },
 };
 
 export default function DashboardScreen() {
@@ -38,7 +37,14 @@ export default function DashboardScreen() {
   const [username, setUsername] = useState('');
 
   useEffect(() => {
-    loadData();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        router.replace('/login');
+        return;
+      }
+      loadData();
+    });
+    return unsubscribe;
   }, []);
 
   useEffect(() => {
@@ -50,55 +56,37 @@ export default function DashboardScreen() {
   }, [originalBrightness]);
 
   async function loadData() {
-  try {
-    const currentUsername = await getCurrentUser();
-    setUsername(currentUsername || '');
+    try {
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser) {
+        setLoading(false);
+        return;
+      }
 
-    if (!currentUsername) {
+      const uid = firebaseUser.uid;
+      setUsername(firebaseUser.email || '');
+
+      // Customer profile is keyed by uid since the register.jsx update
+      const profile = await getCustomerById(uid);
+
+      if (!profile) {
+        console.warn('No Firebase profile found for uid:', uid);
+        setLoading(false);
+        return;
+      }
+
+      setCustomer({ id: uid, ...profile });
+
+      const userOrders = await getOrdersForUser(uid);
+      setOrders(userOrders || []);
+
+    } catch (err) {
+      console.error('Error loading dashboard:', err);
+    } finally {
       setLoading(false);
-      return;
+      setRefreshing(false);
     }
-
-    const users     = await getUsers();
-    const localUser = users.find(u => u.username === currentUsername);
-
-    if (!localUser) {
-      setLoading(false);
-      return;
-    }
-
-    const firebaseId = localUser.firebaseId;
-
-    if (!firebaseId) {
-      // firebaseId missing — user registered before this field existed
-      // Show dashboard without Firebase profile data
-      console.warn('No firebaseId found for user:', currentUsername);
-      setLoading(false);
-      return;
-    }
-
-    // Load customer profile from Firebase
-    const profile = await getCustomerById(firebaseId);
-
-    if (!profile) {
-      console.warn('No Firebase profile found for id:', firebaseId);
-      setLoading(false);
-      return;
-    }
-
-    setCustomer({ id: firebaseId, ...profile });
-
-    // Load their orders
-    const userOrders = await getOrdersForUser(firebaseId);
-    setOrders(userOrders || []);
-
-  } catch (err) {
-    console.error('Error loading dashboard:', err);
-  } finally {
-    setLoading(false);
-    setRefreshing(false);
   }
-}
 
 // Toggles the QR card and boosts screen brightness while it's shown —
 // glare/dim screens are the #1 cause of failed scans in real shop lighting
@@ -130,7 +118,7 @@ export default function DashboardScreen() {
   }
 
   async function handleLogout() {
-    await clearCurrentUser();
+    await signOut(auth);
     router.replace('/login');
   }
 
@@ -156,28 +144,35 @@ export default function DashboardScreen() {
 
       {/* ── HEADER ─────────────────────────────────── */}
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.logo}>🧺 LaundryMatic</Text>
-          <Text style={styles.sub}>
-            Hello, {customer?.firstName || username} 👋
-          </Text>
-        </View>
-        <View style={styles.headerRight}>
-          {/* Notifications bell */}
-          <TouchableOpacity
-            style={styles.iconBtn}
-            onPress={() => router.push('/notifications')}
-          >
-            <Text style={styles.iconBtnText}>🔔</Text>
-          </TouchableOpacity>
-          {/* Logout */}
-          <TouchableOpacity
-            style={styles.iconBtn}
-            onPress={handleLogout}
-          >
-            <Text style={styles.iconBtnText}>⏻</Text>
-          </TouchableOpacity>
-        </View>
+          <View style={styles.headerLeft}>
+              <View style={styles.logoRow}>
+                  <Image
+                      source={require('../assets/images/laundrymatic-logo.png')}
+                      style={styles.logoImage}
+                      resizeMode="contain"
+                  />
+                  <Text style={styles.logo}>LaundryMatic</Text>
+              </View>
+              <Text style={styles.sub}>
+                  Hello, {customer?.firstName || username}
+              </Text>
+          </View>
+          <View style={styles.headerRight}>
+              {/* Notifications bell */}
+              <TouchableOpacity
+                  style={styles.iconBtn}
+                  onPress={() => router.push('/notifications')}
+              >
+                  <Bell color={Colors.text} size={16} />
+              </TouchableOpacity>
+              {/* Logout */}
+              <TouchableOpacity
+                  style={styles.iconBtn}
+                  onPress={handleLogout}
+              >
+                  <Power color={Colors.text} size={16} />
+              </TouchableOpacity>
+          </View>
       </View>
 
       <ScrollView
@@ -199,9 +194,10 @@ export default function DashboardScreen() {
               ? styles.statusApproved
               : styles.statusPending
           ]}>
-            <Text style={styles.statusCardIcon}>
-              {customer.status === 'approved' ? '✅' : '⏳'}
-            </Text>
+              {customer.status === 'approved'
+                  ? <CheckCircle2 color={Colors.accent} size={22} />
+                  : <Hourglass color={Colors.accent3} size={22} />
+              }
             <View style={styles.statusCardBody}>
               <Text style={styles.statusCardTitle}>
                 {customer.status === 'approved'
@@ -231,9 +227,12 @@ export default function DashboardScreen() {
             })
             }
           >
-            <Text style={styles.showQRBtnText}>
-              📱 Show My QR Code
-            </Text>
+              <View style={styles.showQRBtnRow}>
+                  <Smartphone color={Colors.accent} size={15} />
+                  <Text style={styles.showQRBtnText}>
+                      Show My QR Code
+                  </Text>
+              </View>
           </TouchableOpacity>
         )}
 
@@ -319,7 +318,7 @@ export default function DashboardScreen() {
 
         {activeOrders.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>🧺</Text>
+              <Shirt color={Colors.muted} size={32} style={{ marginBottom: 10 }} />
             <Text style={styles.emptyTitle}>No active orders</Text>
             <Text style={styles.emptyText}>
               Drop off your laundry at the shop and your
@@ -365,12 +364,12 @@ function OrderCard({ order, past = false }) {
       {/* Top row: transaction code + status badge */}
       <View style={styles.orderTop}>
         <Text style={styles.txnCode}>{order.transactionCode}</Text>
-        <View style={[styles.badge, { borderColor: s.color }]}>
-          <Text style={styles.badgeDot}>{s.icon}</Text>
-          <Text style={[styles.badgeText, { color: s.color }]}>
-            {s.label}
-          </Text>
-        </View>
+          <View style={[styles.badge, { borderColor: s.color }]}>
+              <s.icon color={s.color} size={11} />
+              <Text style={[styles.badgeText, { color: s.color }]}>
+                  {s.label}
+              </Text>
+          </View>
       </View>
 
       {/* Details grid */}
@@ -401,11 +400,17 @@ function OrderCard({ order, past = false }) {
           styles.etaRow,
           order.status === 'ready' && styles.etaRowReady,
         ]}>
-          <Text style={styles.etaLabel}>
-            {order.status === 'ready'
-              ? '✅ Ready for pickup now'
-              : `⏰ Est. finish: ${order.estimatedFinishTime || '—'}`}
-          </Text>
+            <View style={styles.etaLabelRow}>
+                {order.status === 'ready'
+                    ? <CheckCircle2 color={Colors.muted2} size={13} />
+                    : <Clock color={Colors.muted2} size={13} />
+                }
+                <Text style={styles.etaLabel}>
+                    {order.status === 'ready'
+                        ? 'Ready for pickup now'
+                        : `Est. finish: ${order.estimatedFinishTime || '—'}`}
+                </Text>
+            </View>
           {order.estimatedHours && order.status !== 'ready' && (
             <Text style={styles.etaHours}>
               ~{order.estimatedHours}h
@@ -432,12 +437,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20, paddingTop: 56,
+    padding: 20, paddingTop: 20,
     backgroundColor: Colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  headerLeft: { flex: 1 },
+    headerLeft: { flex: 1 },
+    logoRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
+    logoImage: { width: 50, height: 50 },
   headerRight: { flexDirection: 'row', gap: 8 },
   logo: { fontSize: 17, fontWeight: '800', color: Colors.text },
   sub: { fontSize: 12, color: Colors.muted2, marginTop: 2 },
@@ -488,9 +495,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  showQRBtnText: {
-    fontSize: 14, fontWeight: '700', color: Colors.accent,
-  },
+    showQRBtnRow: {
+        flexDirection: 'row', alignItems: 'center', gap: 8,
+    },
+    showQRBtnText: {
+        fontSize: 14, fontWeight: '700', color: Colors.accent,
+    },
 
   // Section headers
   sectionHeader: {
@@ -578,7 +588,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(74,244,176,0.08)',
     borderWidth: 1, borderColor: 'rgba(74,244,176,0.2)',
   },
-  etaLabel: { fontSize: 12, color: Colors.muted2 },
+    etaLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    etaLabel: { fontSize: 12, color: Colors.muted2 },
   etaHours: {
     fontSize: 12, color: Colors.accent2,
     fontFamily: 'monospace', fontWeight: '600',

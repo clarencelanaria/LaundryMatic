@@ -7,22 +7,21 @@ import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Colors from '../constants/colors';
-import { getCurrentUser, seedDefaultUser } from '../utils/storage';
+import { auth } from '../utils/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 export default function IndexScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    async function init() {
-      await seedDefaultUser();
-      const user = await getCurrentUser();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         router.replace('/dashboard');
       } else {
         router.replace('/login');
       }
-    }
-    init();
+    });
+    return unsubscribe;
   }, [router]);
 
   // Show spinner while checking auth

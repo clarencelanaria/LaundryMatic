@@ -4,109 +4,45 @@ import {
   View, Text, ScrollView,
   TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform,
+    Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AuthInput  from '../components/AuthInput';
 import AuthButton from '../components/AuthButton';
 import Colors     from '../constants/colors';
-import { getUsers, saveUsers } from '../utils/storage';
+import { CheckCircle2, ArrowRight, AlertTriangle, ArrowLeft } from 'lucide-react-native';
+import { auth } from '../utils/firebase';
+import { sendPasswordResetEmail } from 'firebase/auth';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
 
   // Step 1 — enter username
   // Step 2 — answer security question + new password
-  const [step,         setStep]         = useState(1);
-  const [username,     setUsername]     = useState('');
-  const [answer,       setAnswer]       = useState('');
-  const [newPassword,  setNewPassword]  = useState('');
-  const [confirm,      setConfirm]      = useState('');
-  const [foundUser,    setFoundUser]    = useState(null);
-  const [loading,      setLoading]      = useState(false);
-  const [error,        setError]        = useState('');
-  const [success,      setSuccess]      = useState(false);
+  const [email,   setEmail]   = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState('');
+  const [success, setSuccess] = useState(false);
 
   // ── STEP 1: Find the account ────────────────────────────
-
-  async function handleFindAccount() {
-    setError('');
-
-    if (!username.trim()) {
-      setError('Please enter your username.');
-      return;
-    }
-
-    setLoading(true);
-
-    const users = await getUsers();
-    const user  = users.find(
-      u => u.username.toLowerCase() === username.toLowerCase()
-    );
-
-    setLoading(false);
-
-    if (!user) {
-      setError('No account found with that username.');
-      return;
-    }
-
-    if (!user.question || !user.answer) {
-      setError(
-        'This account has no security question set. ' +
-        'Please contact the shop admin.'
-      );
-      return;
-    }
-
-    setFoundUser(user);
-    setStep(2);
-  }
-
-  // ── STEP 2: Verify answer and reset password ────────────
-
   async function handleReset() {
     setError('');
 
-    if (!answer.trim()) {
-      setError('Please enter your answer.');
-      return;
-    }
-
-    if (answer.trim() !== foundUser.answer) {
-      setError('Incorrect answer. Please try again.');
-      return;
-    }
-
-    if (!newPassword) {
-      setError('Please enter a new password.');
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters.');
-      return;
-    }
-
-    if (newPassword !== confirm) {
-      setError('Passwords do not match.');
+    if (!email.trim()) {
+      setError('Please enter your email.');
       return;
     }
 
     setLoading(true);
 
-    // Update the password in AsyncStorage
-    const users = await getUsers();
-    const index = users.findIndex(
-      u => u.username.toLowerCase() === foundUser.username.toLowerCase()
-    );
-
-    if (index !== -1) {
-      users[index].password = newPassword;
-      await saveUsers(users);
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      setSuccess(true);
+    } catch (err) {
+      setError('Could not send reset email. Check the address and try again.');
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
-    setSuccess(true);
   }
 
   // ── SUCCESS STATE ────────────────────────────────────────
@@ -115,19 +51,22 @@ export default function ForgotPasswordScreen() {
     return (
       <View style={styles.screen}>
         <View style={styles.successCard}>
-          <Text style={styles.successIcon}>✅</Text>
+          <CheckCircle2 color={Colors.accent} size={48} style={{ marginBottom: 16 }} />
           <Text style={styles.successTitle}>Password Reset!</Text>
           <Text style={styles.successText}>
-            Your password has been updated successfully.
-            You can now log in with your new password.
+            Check your email for a link to reset your password,
+            then come back and log in.
           </Text>
           <TouchableOpacity
-            style={styles.backBtn}
-            onPress={() => router.replace('/login')}
+              style={styles.backBtn}
+              onPress={() => router.replace('/login')}
           >
-            <Text style={styles.backBtnText}>
-              Go to Login →
-            </Text>
+            <View style={styles.backBtnRow}>
+              <Text style={styles.backBtnText}>
+                Go to Login
+              </Text>
+              <ArrowRight color="#ffffff" size={15} />
+            </View>
           </TouchableOpacity>
         </View>
       </View>
@@ -149,124 +88,50 @@ export default function ForgotPasswordScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
-            style={styles.backArrow}
-            onPress={() => router.back()}
+              style={styles.backArrowRow}
+              onPress={() => router.back()}
           >
-            <Text style={styles.backArrowText}>← Back</Text>
+            <ArrowLeft color={Colors.accent} size={15} />
+            <Text style={styles.backArrowText}>Back</Text>
           </TouchableOpacity>
 
           <View style={styles.logoBox}>
-            <Text style={styles.logoEmoji}>🧺</Text>
+            <Image
+                source={require('../assets/images/laundrymatic-logo.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+            />
           </View>
           <Text style={styles.title}>Reset Password</Text>
           <Text style={styles.subtitle}>
-            {step === 1
-              ? 'Enter your username to find your account'
-              : `Answer your security question`}
+            Enter your email and we;ll send you a reset link
           </Text>
-        </View>
-
-        {/* Progress dots */}
-        <View style={styles.progressRow}>
-          <View style={[styles.progressDot,
-            step >= 1 && styles.progressDotActive]} />
-          <View style={styles.progressLine} />
-          <View style={[styles.progressDot,
-            step >= 2 && styles.progressDotActive]} />
         </View>
 
         {/* Form card */}
         <View style={styles.card}>
 
           {error ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>⚠ {error}</Text>
-            </View>
+              <View style={styles.errorBox}>
+                <AlertTriangle color={Colors.danger} size={15} style={styles.errorIcon} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
           ) : null}
 
-          {/* ── STEP 1 ─────────────────────────────── */}
-          {step === 1 && (
-            <>
-              <Text style={styles.stepLabel}>STEP 1 OF 2</Text>
-              <Text style={styles.stepTitle}>Find Your Account</Text>
+          <AuthInput
+              label="Email"
+              placeholder="you@example.com"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+          />
 
-              <AuthInput
-                label="Username"
-                placeholder="Enter your username"
-                value={username}
-                onChangeText={setUsername}
-              />
-
-              <AuthButton
-                label="Find Account"
-                onPress={handleFindAccount}
-                loading={loading}
-              />
-            </>
-          )}
-
-          {/* ── STEP 2 ─────────────────────────────── */}
-          {step === 2 && foundUser && (
-            <>
-              <Text style={styles.stepLabel}>STEP 2 OF 2</Text>
-              <Text style={styles.stepTitle}>Verify Your Identity</Text>
-
-              {/* Show the security question */}
-              <View style={styles.questionBox}>
-                <Text style={styles.questionLabel}>
-                  SECURITY QUESTION
-                </Text>
-                <Text style={styles.questionText}>
-                  {foundUser.question}
-                </Text>
-              </View>
-
-              <AuthInput
-                label="Your Answer"
-                placeholder="Enter your answer (case-sensitive)"
-                value={answer}
-                onChangeText={setAnswer}
-              />
-
-              <AuthInput
-                label="New Password"
-                placeholder="Min. 6 characters"
-                value={newPassword}
-                onChangeText={setNewPassword}
-                secureText={true}
-              />
-
-              <AuthInput
-                label="Confirm New Password"
-                placeholder="Repeat your new password"
-                value={confirm}
-                onChangeText={setConfirm}
-                secureText={true}
-              />
-
-              <AuthButton
-                label="Reset Password"
-                onPress={handleReset}
-                loading={loading}
-              />
-
-              {/* Go back to step 1 */}
-              <TouchableOpacity
-                style={styles.stepBackBtn}
-                onPress={() => {
-                  setStep(1);
-                  setError('');
-                  setAnswer('');
-                  setNewPassword('');
-                  setConfirm('');
-                }}
-              >
-                <Text style={styles.stepBackText}>
-                  ← Try a different username
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
+          <AuthButton
+              label="Send Reset Link"
+              onPress={handleReset}
+              loading={loading}
+          />
 
         </View>
 
@@ -285,17 +150,22 @@ const styles = StyleSheet.create({
 
   // Header
   header:        { alignItems: 'center', marginBottom: 24 },
-  backArrow:     { alignSelf: 'flex-start', marginBottom: 20 },
+  backArrowRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    alignSelf: 'flex-start', marginBottom: 20,
+  },
   backArrowText: { fontSize: 14, color: Colors.accent, fontWeight: '600' },
 
   logoBox: {
-    width: 56, height: 56,
-    backgroundColor: Colors.accent,
+    width: 150, height: 150,
     borderRadius: 14,
     alignItems: 'center', justifyContent: 'center',
     marginBottom: 14,
+    overflow: 'hidden',
   },
-  logoEmoji: { fontSize: 24 },
+  logoImage: {
+    width: 150, height: 150,
+  },
 
   title: {
     fontSize: 24, fontWeight: '800',
@@ -352,13 +222,17 @@ const styles = StyleSheet.create({
 
   // Error box
   errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     backgroundColor: 'rgba(244,74,106,0.08)',
     borderWidth: 1,
     borderColor: 'rgba(244,74,106,0.25)',
     borderRadius: 8,
     padding: 12, marginBottom: 16,
   },
-  errorText: { color: Colors.danger, fontSize: 13 },
+  errorIcon: { flexShrink: 0 },
+  errorText: { flex: 1, color: Colors.danger, fontSize: 13 },
 
   // Security question display
   questionBox: {
@@ -388,6 +262,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
   },
+  stepBackRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+  },
   stepBackText: {
     fontSize: 13,
     color: Colors.muted2,
@@ -415,6 +292,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 13,
     paddingHorizontal: 32,
+  },
+  backBtnRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
   },
   backBtnText: {
     fontSize: 15, fontWeight: '700', color: '#ffffff',

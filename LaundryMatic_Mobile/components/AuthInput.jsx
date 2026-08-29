@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import Colors from '../constants/colors';
+import { Eye, EyeOff } from 'lucide-react-native';
 
 // Props this component accepts:
 // label       — the small label above the input (e.g. "Username")
@@ -51,12 +52,15 @@ export default function AuthInput({
 
         {/* Only show the eye button if this is a password field */}
         {secureText && (
-          <TouchableOpacity
-            style={styles.eyeBtn}
-            onPress={() => setVisible(v => !v)}
-          >
-            <Text style={styles.eyeIcon}>{visible ? '🙈' : '👁'}</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+                style={styles.eyeBtn}
+                onPress={() => setVisible(v => !v)}
+            >
+              {visible
+                  ? <EyeOff color={Colors.muted2} size={17} />
+                  : <Eye color={Colors.muted2} size={17} />
+              }
+            </TouchableOpacity>
         )}
       </View>
 

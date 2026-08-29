@@ -1,4 +1,5 @@
 // utils/firebase.js
+import { Platform } from 'react-native';
 import { initializeApp } from 'firebase/app';
 import {
     getDatabase, ref,
@@ -6,6 +7,8 @@ import {
     query, orderByChild,
     equalTo, onValue
 } from 'firebase/database';
+import { initializeAuth, getAuth, getReactNativePersistence } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Same config as your web app — paste your values here
 const firebaseConfig = {
@@ -21,6 +24,15 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const db = getDatabase(app);
+
+// getReactNativePersistence doesn't exist in Firebase's web build —
+// only call it on actual mobile. On web, plain getAuth() already
+// persists sessions in the browser on its own.
+export const auth = Platform.OS === 'web'
+    ? getAuth(app)
+    : initializeAuth(app, {
+        persistence: getReactNativePersistence(AsyncStorage),
+    });
 
 // Gets all orders for a specific customer by their userId
 export async function getOrdersForUser(userId) {
@@ -65,17 +77,17 @@ export async function getCustomerById(userId) {
     return snapshot.val();
 }
 
-// Saves a new customer from the mobile registration form
-export async function registerCustomerMobile(customerData) {
-    const newRef = push(ref(db, 'users'));
-    const userId = newRef.key;
-    await set(newRef, {
+// Saves a new customer profile — keyed by their Firebase Auth uid
+// (instead of a random push key) so the login account and the
+// customer record are always the same ID
+export async function registerCustomerMobile(uid, customerData) {
+    await set(ref(db, `users/${uid}`), {
         ...customerData,
-        profileQR: userId,
+        profileQR: uid,
         status: 'pending',   // hidden from dashboard until admin validates
         createdAt: new Date().toISOString(),
     });
-    return userId;
+    return uid;
 }
 
 // Listens to realtime order updates for one customer

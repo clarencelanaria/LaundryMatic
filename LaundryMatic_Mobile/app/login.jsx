@@ -8,16 +8,20 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
+    Image
 } from 'react-native';
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AlertTriangle, Check } from 'lucide-react-native';
 import AuthButton from '../components/AuthButton';
 import AuthInput from '../components/AuthInput';
 import Colors from '../constants/colors';
+import { auth } from '../utils/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import {
-  findUser,
-  setCurrentUser
+  getRememberedEmail,
+  setRememberedEmail,
+  clearRememberedEmail,
 } from '../utils/storage';
 
 export default function LoginScreen() {
@@ -33,7 +37,7 @@ export default function LoginScreen() {
   // On load: pre-fill remembered username if it exists
   useEffect(() => {
     async function prefill() {
-      const saved = await AsyncStorage.getItem('lm_remembered');
+      const saved = await getRememberedEmail();
       if (saved) {
         setUsername(saved);
         setRemember(true);
@@ -47,34 +51,29 @@ export default function LoginScreen() {
     setError('');
 
     if (!username || !password) {
-      setError('Please enter your username and password.');
+      setError('Please enter your email and password.');
       return;
     }
 
     setLoading(true);
 
-    const user = await findUser(username);
+    try {
+      await signInWithEmailAndPassword(auth, username, password);
 
-    if (!user || user.password !== password) {
-      setError('Invalid username or password.');
+      if (remember) {
+        await setRememberedEmail(username);
+      } else {
+        await clearRememberedEmail();
+      }
+
+      // Navigate to Dashboard
+      // replace() means the user can't press Back to return to Login
+      router.replace('/dashboard');
+    } catch (err) {
+      setError('Invalid email or password.');
+    } finally {
       setLoading(false);
-      return;
     }
-
-    // Save session
-    await setCurrentUser(user.username);
-
-    if (remember) {
-      await AsyncStorage.setItem('lm_remembered', user.username);
-    } else {
-      await AsyncStorage.removeItem('lm_remembered');
-    }
-
-    setLoading(false);
-
-    // Navigate to Dashboard
-    // replace() means the user can't press Back to return to Login
-    router.replace('/dashboard');
   }
 
   return (
@@ -91,11 +90,16 @@ export default function LoginScreen() {
         {/* ── BRAND HEADER ─────────────────────── */}
         <View style={styles.brand}>
           <View style={styles.logoBox}>
-            <Text style={styles.logoEmoji}>🧺</Text>
+            <Image
+                source={require('../assets/images/laundrymatic-logo.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+            />
           </View>
           <Text style={styles.brandName}>LaundryMatic</Text>
-          <Text style={styles.brandTag}>IoT Smart Weighing System</Text>
+          <Text style={styles.brandTag}>IoT Weighing System</Text>
         </View>
+
 
         {/* ── FORM CARD ────────────────────────── */}
         <View style={styles.card}>
@@ -105,16 +109,19 @@ export default function LoginScreen() {
 
           {/* Error message — only shown when error is not empty */}
           {error ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>⚠ {error}</Text>
-            </View>
+              <View style={styles.errorBox}>
+                <AlertTriangle color={Colors.danger} size={15} style={styles.errorIcon} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
           ) : null}
 
           <AuthInput
-            label="Username"
-            placeholder="Enter your username"
-            value={username}
-            onChangeText={setUsername}
+              label="Email"
+              placeholder="you@example.com"
+              value={username}
+              onChangeText={setUsername}
+              keyboardType="email-address"
+              autoCapitalize="none"
           />
 
           <AuthInput
@@ -132,7 +139,7 @@ export default function LoginScreen() {
               onPress={() => setRemember(r => !r)}
             >
               <View style={[styles.checkbox, remember && styles.checkboxOn]}>
-                {remember && <Text style={styles.checkmark}>✓</Text>}
+                {remember && <Check color="#ffffff" size={12} strokeWidth={3} />}
               </View>
               <Text style={styles.rememberLabel}>Remember me</Text>
             </TouchableOpacity>
@@ -187,16 +194,18 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   logoBox: {
-    width: 64,
-    height: 64,
-    backgroundColor: Colors.accent,
+    width: 200,
+    height: 200,
     borderRadius: 16,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
+    alignSelf: 'center',
   },
-  logoEmoji: {
-    fontSize: 28,
+  logoImage: {
+    width: 200,
+    height: 200,
   },
   brandName: {
     fontSize: 26,
@@ -235,6 +244,9 @@ const styles = StyleSheet.create({
 
   // Error box
   errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     backgroundColor: 'rgba(244, 74, 106, 0.08)',
     borderWidth: 1,
     borderColor: 'rgba(244, 74, 106, 0.25)',
@@ -242,7 +254,11 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 16,
   },
+  errorIcon: {
+    flexShrink: 0,
+  },
   errorText: {
+    flex: 1,
     color: Colors.danger,
     fontSize: 13,
   },

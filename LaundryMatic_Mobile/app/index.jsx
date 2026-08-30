@@ -7,22 +7,23 @@ import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Colors from '../constants/colors';
-import { auth } from '../utils/firebase';
+import { auth, hasCompletedAllAgreements } from '../utils/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 
 export default function IndexScreen() {
-  const router = useRouter();
+    const router = useRouter();
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        router.replace('/dashboard');
-      } else {
-        router.replace('/login');
-      }
-    });
-    return unsubscribe;
-  }, [router]);
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                router.replace('/login');
+                return;
+            }
+            const completed = await hasCompletedAllAgreements(user.uid);
+            router.replace(completed ? '/dashboard' : { pathname: '/terms', params: { mode: 'gate' } });
+        });
+        return unsubscribe;
+    }, [router]);
 
   // Show spinner while checking auth
   return (

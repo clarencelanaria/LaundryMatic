@@ -2625,16 +2625,23 @@ window.addEventListener('DOMContentLoaded', () => {
     auth.onAuthStateChanged(async (firebaseUser) => {
         if (!firebaseUser) return;       // auth.js's checkAuthState() already redirects to index.html
         if (dashboardReady) return;      // onAuthStateChanged can fire more than once
+
+        // Same Terms check auth.js uses — if not accepted, checkAuthState()
+        // is already sending this user to index.html, so don't waste a
+        // fetch or render half a dashboard while that redirect happens
+        const accepted = await hasAcceptedCurrentTerms(firebaseUser.uid);
+        if (!accepted) return;
+
         dashboardReady = true;
 
         // Fill sidebar name from the admin's profile stored in Firebase
         const snap = await db.ref('admins/' + firebaseUser.uid).once('value');
         const admin = snap.val();
-        if (admin) {
+        if (admin && admin.firstName) {
             const nameEl = document.getElementById('sidebar-name');
             const avatarEl = document.getElementById('sidebar-avatar');
-            if (nameEl) nameEl.textContent = admin.firstName + ' ' + admin.lastName;
-            if (avatarEl) avatarEl.textContent = admin.firstName[0] + admin.lastName[0];
+            if (nameEl) nameEl.textContent = admin.firstName + ' ' + (admin.lastName || '');
+            if (avatarEl) avatarEl.textContent = admin.firstName[0] + (admin.lastName ? admin.lastName[0] : '');
         }
 
         renderIcons(); // activates any icon() placeholders already in the static HTML

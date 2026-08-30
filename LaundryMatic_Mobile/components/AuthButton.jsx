@@ -16,17 +16,20 @@ import Colors from '../constants/colors';
 export default function AuthButton({
   label,
   onPress,
-  loading = false,
+  loading = false, disabled = false,
   variant = 'primary',
 }) {
   const isPrimary = variant === 'primary';
+  const isDisabled = disabled || loading;
 
   return (
     <TouchableOpacity
-      style={[styles.btn, isPrimary ? styles.primary : styles.ghost]}
+      style={[styles.btn, isPrimary ? styles.primary : styles.ghost,
+      isDisabled && { opacity: 0.5 },
+      ]}
       onPress={onPress}
       activeOpacity={0.75}
-      disabled={loading}       // disables tap while loading
+      disabled={isDisabled}
     >
       {loading ? (
         // Spinner shown while an async action is running

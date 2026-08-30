@@ -16,7 +16,7 @@ import { AlertTriangle, Check } from 'lucide-react-native';
 import AuthButton from '../components/AuthButton';
 import AuthInput from '../components/AuthInput';
 import Colors from '../constants/colors';
-import { auth } from '../utils/firebase';
+import { auth, hasCompletedAllAgreements } from '../utils/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import {
   getRememberedEmail,
@@ -58,7 +58,7 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, username, password);
+      const cred = await signInWithEmailAndPassword(auth, username, password);
 
       if (remember) {
         await setRememberedEmail(username);
@@ -66,9 +66,10 @@ export default function LoginScreen() {
         await clearRememberedEmail();
       }
 
-      // Navigate to Dashboard
-      // replace() means the user can't press Back to return to Login
-      router.replace('/dashboard');
+      // Route based on Terms acceptance instead of always going
+      // straight to the dashboard
+      const completed = await hasCompletedAllAgreements(cred.user.uid);
+      router.replace(completed ? '/dashboard' : { pathname: '/terms', params: { mode: 'gate' } });
     } catch (err) {
       setError('Invalid email or password.');
     } finally {

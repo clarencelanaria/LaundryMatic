@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import { initializeApp } from 'firebase/app';
 import {
     getDatabase, ref,
-    set, push, get,
+    set, push, get, update,
     query, orderByChild,
     equalTo, onValue
 } from 'firebase/database';
@@ -33,6 +33,57 @@ export const auth = Platform.OS === 'web'
     : initializeAuth(app, {
         persistence: getReactNativePersistence(AsyncStorage),
     });
+
+// ── TERMS AND CONDITIONS + PRIVACY NOTICE ─────────────────────
+// Bump either string whenever that document's text changes — matches
+// the web app's constants of the same names. Keep both in sync
+// across platforms.
+export const CURRENT_TERMS_VERSION = '1.0';
+export const CURRENT_PRIVACY_VERSION = '1.0';
+
+// Checks Firebase directly — never trusts a cached/local flag.
+// Customer agreement data lives on their profile at users/{uid}.
+export async function hasAcceptedCurrentTerms(uid) {
+    const snap = await get(ref(db, `users/${uid}`));
+    const profile = snap.val();
+    return !!(profile && profile.termsAccepted === true && profile.termsVersion === CURRENT_TERMS_VERSION);
+}
+
+export async function hasAcknowledgedCurrentPrivacy(uid) {
+    const snap = await get(ref(db, `users/${uid}`));
+    const profile = snap.val();
+    return !!(profile && profile.privacyAcknowledged === true && profile.privacyVersion === CURRENT_PRIVACY_VERSION);
+}
+
+// Both must be current — used everywhere a single pass/fail decision is needed
+export async function hasCompletedAllAgreements(uid) {
+    const [terms, privacy] = await Promise.all([
+        hasAcceptedCurrentTerms(uid),
+        hasAcknowledgedCurrentPrivacy(uid),
+    ]);
+    return terms && privacy;
+}
+
+// Records acceptance/acknowledgment for an existing customer going
+// through the gate. Only writes the fields for documents actually
+// checked — mirrors the web app's partial-update behavior so a
+// Terms-only bump doesn't touch an already-current Privacy record.
+export async function acceptCurrentAgreements({ acceptTerms, acceptPrivacy }, uid) {
+    const updates = {};
+    if (acceptTerms) {
+        updates.termsAccepted = true;
+        updates.termsAcceptedAt = new Date().toISOString();
+        updates.termsVersion = CURRENT_TERMS_VERSION;
+    }
+    if (acceptPrivacy) {
+        updates.privacyAcknowledged = true;
+        updates.privacyAcknowledgedAt = new Date().toISOString();
+        updates.privacyVersion = CURRENT_PRIVACY_VERSION;
+    }
+    if (Object.keys(updates).length > 0) {
+        await update(ref(db, `users/${uid}`), updates);
+    }
+}
 
 // Gets all orders for a specific customer by their userId
 export async function getOrdersForUser(userId) {

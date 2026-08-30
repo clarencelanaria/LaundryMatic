@@ -12,20 +12,159 @@
    ─────────────────────────────────────────────────────────── */
 
 /* ─── HELPERS ────────────────────────────────────────────────*/
-function checkAuthState() {
-    const onAuthPage = window.location.pathname.includes('index')
-        || window.location.pathname.includes('register');
+async function checkAuthState() {
+    const onIndexPage = window.location.pathname.includes('index');
+    const onAuthPage = onIndexPage || window.location.pathname.includes('register');
 
-    auth.onAuthStateChanged(user => {
-        if (user && onAuthPage) {
-            window.location.href = 'dashboard.html';
+    auth.onAuthStateChanged(async user => {
+        if (!user) {
+            hideTermsGate();
+            if (!onAuthPage) window.location.href = 'index.html';
+            return;
         }
-        if (!user && !onAuthPage) {
-            window.location.href = 'index.html';
+
+        const completed = await hasCompletedAllAgreements(user.uid);
+
+        if (!completed) {
+            // The login page owns the gate UI — anywhere else, bounce
+            // there so it can show it (this also blocks direct
+            // dashboard.html access for anyone with outdated terms
+            // and/or privacy acknowledgment)
+            if (onIndexPage) {
+                showTermsGate(user.uid);
+            } else {
+                window.location.href = 'index.html';
+            }
+            return;
+        }
+
+        // Both documents are current — normal existing behavior
+        if (onAuthPage) {
+            window.location.href = 'dashboard.html';
         }
     });
 }
 checkAuthState();
+
+// ── TERMS AND CONDITIONS + PRIVACY NOTICE ─────────────────────
+// Bump either string whenever that document's text changes —
+// anyone who accepted/acknowledged an older version gets re-gated
+// automatically, independently of the other document.
+const CURRENT_TERMS_VERSION = '1.0';
+const CURRENT_PRIVACY_VERSION = '1.0';
+
+// Holds the uid of whoever is currently stuck at the gate, so the
+// Accept button (which has no arguments in its onclick) knows who to update
+let gateUid = null;
+
+// Checks Firebase directly — never trusts a cached/local flag
+async function hasAcceptedCurrentTerms(uid) {
+    const snap = await db.ref('admins/' + uid).once('value');
+    const admin = snap.val();
+    return !!(admin && admin.termsAccepted === true && admin.termsVersion === CURRENT_TERMS_VERSION);
+}
+
+async function hasAcknowledgedCurrentPrivacy(uid) {
+    const snap = await db.ref('admins/' + uid).once('value');
+    const admin = snap.val();
+    return !!(admin && admin.privacyAcknowledged === true && admin.privacyVersion === CURRENT_PRIVACY_VERSION);
+}
+
+// Both must be current — used everywhere a single pass/fail decision is needed
+async function hasCompletedAllAgreements(uid) {
+    const [terms, privacy] = await Promise.all([
+        hasAcceptedCurrentTerms(uid),
+        hasAcknowledgedCurrentPrivacy(uid),
+    ]);
+    return terms && privacy;
+}
+
+// ── Login-page gate (index.html only) ────────────────────────
+// Shows only whichever tab is actually outdated for this user —
+// a Terms-only version bump doesn't force re-reading a still-current
+// Privacy Notice, and vice versa.
+async function showTermsGate(uid) {
+    gateUid = uid;
+
+    const termsOk = await hasAcceptedCurrentTerms(uid);
+    const privacyOk = await hasAcknowledgedCurrentPrivacy(uid);
+
+    document.getElementById('gate-terms-checkbox').checked = termsOk;
+    document.getElementById('gate-privacy-checkbox').checked = privacyOk;
+    document.getElementById('gate-terms-checkbox').disabled = termsOk;
+    document.getElementById('gate-privacy-checkbox').disabled = privacyOk;
+
+    switchGateTab(termsOk ? 'privacy' : 'terms');
+    toggleTermsGateAccept();
+    document.getElementById('terms-gate-modal').classList.add('open');
+}
+
+function hideTermsGate() {
+    const modal = document.getElementById('terms-gate-modal');
+    if (modal) modal.classList.remove('open'); // no-op on pages without this modal
+}
+
+// Switches between the Terms tab and Privacy tab inside the gate modal
+function switchGateTab(tab) {
+    document.getElementById('gate-tab-terms').classList.toggle('active', tab === 'terms');
+    document.getElementById('gate-tab-privacy').classList.toggle('active', tab === 'privacy');
+    document.getElementById('gate-content-terms').style.display = tab === 'terms' ? 'block' : 'none';
+    document.getElementById('gate-content-privacy').style.display = tab === 'privacy' ? 'block' : 'none';
+}
+
+// Accept button only enables once both checkboxes are checked —
+// including ones pre-checked/disabled because that document was
+// already current for this user
+function toggleTermsGateAccept() {
+    const termsChecked = document.getElementById('gate-terms-checkbox').checked;
+    const privacyChecked = document.getElementById('gate-privacy-checkbox').checked;
+    document.getElementById('terms-gate-accept-btn').disabled = !(termsChecked && privacyChecked);
+}
+
+async function handleAcceptTermsGate() {
+    if (!gateUid) return;
+
+    const updates = {};
+    if (document.getElementById('gate-terms-checkbox').checked) {
+        updates.termsAccepted = true;
+        updates.termsAcceptedAt = new Date().toISOString();
+        updates.termsVersion = CURRENT_TERMS_VERSION;
+    }
+    if (document.getElementById('gate-privacy-checkbox').checked) {
+        updates.privacyAcknowledged = true;
+        updates.privacyAcknowledgedAt = new Date().toISOString();
+        updates.privacyVersion = CURRENT_PRIVACY_VERSION;
+    }
+
+    await db.ref('admins/' + gateUid).update(updates);
+    window.location.href = 'dashboard.html';
+}
+
+// ── register.html: read-only Terms/Privacy viewers + button gating ────
+// Button only enables once BOTH checkboxes are checked
+function toggleRegisterButton() {
+    const termsChecked = document.getElementById('terms-checkbox').checked;
+    const privacyChecked = document.getElementById('privacy-checkbox').checked;
+    document.getElementById('register-btn').disabled = !(termsChecked && privacyChecked);
+}
+
+function openTermsModal(e) {
+    e.preventDefault();
+    document.getElementById('terms-modal').classList.add('open');
+}
+
+function closeTermsModal() {
+    document.getElementById('terms-modal').classList.remove('open');
+}
+
+function openPrivacyModal(e) {
+    e.preventDefault();
+    document.getElementById('privacy-modal').classList.add('open');
+}
+
+function closePrivacyModal() {
+    document.getElementById('privacy-modal').classList.remove('open');
+}
 
 // Shows an error box with a message
 // boxId = the id of the .auth-error div
@@ -103,14 +242,15 @@ async function handleLogin() {
 
         await auth.signInWithEmailAndPassword(email, password);
 
-        // Pre-fill the email field next time, only if "remember me" was checked
         if (remember) {
             localStorage.setItem('lm_remembered', email);
         } else {
             localStorage.removeItem('lm_remembered');
         }
 
-        window.location.href = 'dashboard.html';
+        // No redirect here — checkAuthState()'s onAuthStateChanged
+        // listener decides whether to go to the dashboard or show
+        // the Terms gate, since it just fired for this same sign-in.
     } catch (err) {
         showError('login-error', 'login-error-msg', 'Invalid email or password.');
     }
@@ -129,16 +269,28 @@ function handleLogout() {
 async function handleRegister() {
     const firstName = document.getElementById('reg-firstname').value.trim();
     const lastName = document.getElementById('reg-lastname').value.trim();
-    const email = document.getElementById('reg-username').value.trim(); // now expects an email
+    const email = document.getElementById('reg-username').value.trim();
     const password = document.getElementById('reg-password').value;
     const confirm = document.getElementById('reg-confirm').value;
-    const question = document.getElementById('reg-question').value;
-    const answer = document.getElementById('reg-answer').value.trim();
+    const termsChecked = document.getElementById('terms-checkbox').checked;
+    const privacyChecked = document.getElementById('privacy-checkbox').checked;
 
     hideError('register-error');
 
-    if (!firstName || !lastName || !email || !password || !confirm || !question || !answer) {
+    if (!firstName || !lastName || !email || !password || !confirm) {
         showError('register-error', 'register-error-msg', 'Please fill in all fields.');
+        return;
+    }
+
+    // Both agreements are independent and both required before an
+    // account is created — accepting one is never treated as
+    // accepting the other
+    if (!termsChecked) {
+        showError('register-error', 'register-error-msg', 'You must agree to the Terms & Conditions before creating an account.');
+        return;
+    }
+    if (!privacyChecked) {
+        showError('register-error', 'register-error-msg', 'You must acknowledge the Privacy Notice before creating an account.');
         return;
     }
 
@@ -154,7 +306,18 @@ async function handleRegister() {
 
     try {
         const cred = await auth.createUserWithEmailAndPassword(email, password);
-        await db.ref('admins/' + cred.user.uid).set({ firstName, lastName, email });
+        await db.ref('admins/' + cred.user.uid).set({
+            firstName, lastName, email,
+            // Terms & Conditions acceptance
+            termsAccepted: true,
+            termsAcceptedAt: new Date().toISOString(),
+            termsVersion: CURRENT_TERMS_VERSION,
+            // Privacy Notice acknowledgment — recorded separately,
+            // never inferred from Terms acceptance
+            privacyAcknowledged: true,
+            privacyAcknowledgedAt: new Date().toISOString(),
+            privacyVersion: CURRENT_PRIVACY_VERSION,
+        });
         window.location.href = 'dashboard.html';
     } catch (err) {
         showError('register-error', 'register-error-msg', err.message);

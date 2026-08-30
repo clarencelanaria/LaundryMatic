@@ -15,7 +15,7 @@ import {
     Shirt, Bell, Power, Smartphone, Clock,
 } from 'lucide-react-native';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { auth, getOrdersForUser, getCustomerById } from '../utils/firebase';
+import { auth, hasCompletedAllAgreements, getOrdersForUser, getCustomerById } from '../utils/firebase';
 
 // Status display config
 const STATUS_CONFIG = {
@@ -37,9 +37,14 @@ export default function DashboardScreen() {
   const [username, setUsername] = useState('');
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         router.replace('/login');
+        return;
+      }
+      const completed = await hasCompletedAllAgreements(user.uid);
+      if (!completed) {
+        router.replace({ pathname: '/terms', params: { mode: 'gate' } });
         return;
       }
       loadData();

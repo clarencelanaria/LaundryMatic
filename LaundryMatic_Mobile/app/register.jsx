@@ -10,8 +10,11 @@ import {
 import AuthInput from '../components/AuthInput';
 import AuthButton from '../components/AuthButton';
 import Colors from '../constants/colors';
-import { AlertTriangle } from 'lucide-react-native';
-import { auth, registerCustomerMobile, checkDuplicateContact } from '../utils/firebase';
+import { AlertTriangle, Check } from 'lucide-react-native';
+import {
+    auth, registerCustomerMobile, checkDuplicateContact,
+    CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION,
+} from '../utils/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 // Password strength checker
@@ -45,6 +48,8 @@ export default function RegisterScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+    const [termsChecked, setTermsChecked] = useState(false);
+    const [privacyChecked, setPrivacyChecked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -61,72 +66,93 @@ export default function RegisterScreen() {
   }
 
 
-  async function handleRegister() {
-    setError('');
+    async function handleRegister() {
+        setError('');
 
-    if (!firstName || !lastName || !contact1 || !address ||
-        !username  || !password || !confirm) {
-      setError('Please fill in all required fields.');
-      return;
+        if (!firstName || !lastName || !contact1 || !address ||
+            !username  || !password || !confirm) {
+            setError('Please fill in all required fields.');
+            return;
+        }
+
+        // Both agreements are independent and both required before an
+        // account is created — accepting one is never treated as
+        // accepting the other
+        if (!termsChecked) {
+            setError('You must agree to the Terms & Conditions before creating an account.');
+            return;
+        }
+        if (!privacyChecked) {
+            setError('You must acknowledge the Privacy Notice before creating an account.');
+            return;
+        }
+
+        // ── Contact format validation ─────────────────────────────
+        if (!isValidPHContact(contact1)) {
+            setError('Contact Number 1 must be 11 digits starting with 09.');
+            return;
+        }
+        if (contact2 && !isValidPHContact(contact2)) {
+            setError('Contact Number 2 must be 11 digits starting with 09.');
+            return;
+        }
+        if (contact2 && contact2 === contact1) {
+            setError('Contact Number 2 cannot match Contact Number 1.');
+            return;
+        }
+
+        if (password.length < 6) {
+            setError('Password must be at least 6 characters.');
+            return;
+        }
+        if (password !== confirm) {
+            setError('Passwords do not match.');
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            // ── Duplicate contact check against Firebase ─────────────
+            const duplicateCustomer = await checkDuplicateContact(contact1);
+            if (duplicateCustomer) {
+                setError('This contact number is already registered to another account.');
+                setLoading(false);
+                return;
+            }
+
+            // "username" holds an email — this creates the real Firebase Auth account
+            const cred = await createUserWithEmailAndPassword(auth, username, password);
+
+            // Customer profile keyed by the same uid as the auth account
+            await registerCustomerMobile(cred.user.uid, {
+                firstName, lastName, contact1, contact2,
+                address, fbAccount,
+                // Terms & Conditions acceptance
+                termsAccepted: true,
+                termsAcceptedAt: new Date().toISOString(),
+                termsVersion: CURRENT_TERMS_VERSION,
+                // Privacy Notice acknowledgment — recorded separately,
+                // never inferred from Terms acceptance
+                privacyAcknowledged: true,
+                privacyAcknowledgedAt: new Date().toISOString(),
+                privacyVersion: CURRENT_PRIVACY_VERSION,
+            });
+
+            setLoading(false);
+
+            // Go to QR screen — pass the userId so it can display the QR
+            router.replace({
+                pathname: '/showQR',
+                params: { userId: cred.user.uid, firstName, lastName, contact1 }
+            });
+
+        } catch (err) {
+            setError(err.message || 'Registration failed. Check your connection.');
+            console.error(err);
+            setLoading(false);
+        }
     }
-
-    // ── Contact format validation ─────────────────────────────
-    if (!isValidPHContact(contact1)) {
-      setError('Contact Number 1 must be 11 digits starting with 09.');
-      return;
-    }
-    if (contact2 && !isValidPHContact(contact2)) {
-      setError('Contact Number 2 must be 11 digits starting with 09.');
-      return;
-    }
-    if (contact2 && contact2 === contact1) {
-      setError('Contact Number 2 cannot match Contact Number 1.');
-      return;
-    }
-
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
-      return;
-    }
-    if (password !== confirm) {
-      setError('Passwords do not match.');
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      // ── Duplicate contact check against Firebase ─────────────
-      const duplicateCustomer = await checkDuplicateContact(contact1);
-      if (duplicateCustomer) {
-        setError('This contact number is already registered to another account.');
-        setLoading(false);
-        return;
-      }
-
-      // "username" holds an email — this creates the real Firebase Auth account
-      const cred = await createUserWithEmailAndPassword(auth, username, password);
-
-      // Customer profile keyed by the same uid as the auth account
-      await registerCustomerMobile(cred.user.uid, {
-        firstName, lastName, contact1, contact2,
-        address, fbAccount,
-      });
-
-      setLoading(false);
-
-      // Go to QR screen — pass the userId so it can display the QR
-      router.replace({
-        pathname: '/showQR',
-        params: { userId: cred.user.uid, firstName, lastName, contact1 }
-      });
-
-    } catch (err) {
-      setError(err.message || 'Registration failed. Check your connection.');
-      console.error(err);
-      setLoading(false);
-    }
-  }
 
   return (
     <KeyboardAvoidingView
@@ -266,11 +292,44 @@ export default function RegisterScreen() {
             secureText={true}
           />
 
-          <AuthButton
-            label="Register"
-            onPress={handleRegister}
-            loading={loading}
-          />
+            <TouchableOpacity
+                style={styles.termsRow}
+                onPress={() => setTermsChecked(!termsChecked)}
+            >
+                <View style={[styles.checkbox, termsChecked && styles.checkboxChecked]}>
+                    {termsChecked && <Check color="#ffffff" size={13} />}
+                </View>
+                <Text style={styles.termsLabel}>
+                    I have read and agree to the{' '}
+                    <Text style={styles.termsLink} onPress={() => router.push({ pathname: '/terms', params: { doc: 'terms' } })}>
+                        Terms &amp; Conditions
+                    </Text>.
+                </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+                style={styles.termsRow}
+                onPress={() => setPrivacyChecked(!privacyChecked)}
+            >
+                <View style={[styles.checkbox, privacyChecked && styles.checkboxChecked]}>
+                    {privacyChecked && <Check color="#ffffff" size={13} />}
+                </View>
+                <Text style={styles.termsLabel}>
+                    I have read and acknowledge the{' '}
+                    <Text style={styles.termsLink} onPress={() => router.push({ pathname: '/terms', params: { doc: 'privacy' } })}>
+                        Privacy Notice
+                    </Text>{' '}
+                    and, where required, consent to the collection and processing of my personal information as described in the Privacy Notice.
+                </Text>
+            </TouchableOpacity>
+
+            <AuthButton
+                label="Create Account"
+                onPress={handleRegister}
+                loading={loading}
+                disabled={!(termsChecked && privacyChecked)}
+            />
+
 
           <View style={styles.footerRow}>
             <Text style={styles.footerText}>Already have an account? </Text>
@@ -373,4 +432,13 @@ const styles = StyleSheet.create({
   },
   footerText: { fontSize: 13, color: Colors.muted2 },
   link: { fontSize: 13, color: Colors.accent, fontWeight: '600' },
+
+    termsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 16 },
+    checkbox: {
+        width: 20, height: 20, borderRadius: 4, borderWidth: 1.5,
+        borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', marginTop: 1,
+    },
+    checkboxChecked: { backgroundColor: Colors.accent, borderColor: Colors.accent },
+    termsLabel: { flex: 1, fontSize: 13, color: Colors.text, lineHeight: 18 },
+    termsLink: { color: Colors.accent, fontWeight: '600' },
 });

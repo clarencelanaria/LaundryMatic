@@ -85,23 +85,27 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">Security Question</label>
-                <select class="form-input" id="reg-question">
-                    <option value="">Select a question...</option>
-                    <option>What is your mother's maiden name?</option>
-                    <option>What was the name of your first pet?</option>
-                    <option>What city were you born in?</option>
-                    <option>What is your favorite food?</option>
-                    <option>What was the name of your first school?</option>
-                </select>
+                <label class="checkbox" style="display:flex;align-items:flex-start;gap:8px;font-weight:normal">
+                    <input type="checkbox" id="terms-checkbox" onchange="toggleRegisterButton()" style="margin-top:3px">
+                    <span>
+            I have read and agree to the
+            <a href="#" class="auth-link" onclick="openTermsModal(event)">Terms &amp; Conditions</a>.
+        </span>
+                </label>
             </div>
 
             <div class="form-group">
-                <label class="form-label">Security Answer</label>
-                <input class="form-input" type="text" id="reg-answer" placeholder="Your answer (case-sensitive)">
+                <label class="checkbox" style="display:flex;align-items:flex-start;gap:8px;font-weight:normal">
+                    <input type="checkbox" id="privacy-checkbox" onchange="toggleRegisterButton()" style="margin-top:3px">
+                    <span>
+            I have read and acknowledge the
+            <a href="#" class="auth-link" onclick="openPrivacyModal(event)">Privacy Notice</a>
+            and, where required, consent to the collection and processing of my personal information as described in the Privacy Notice.
+        </span>
+                </label>
             </div>
 
-            <button class="btn btn-primary btn-full" onclick="handleRegister()">
+            <button class="btn btn-primary btn-full" id="register-btn" onclick="handleRegister()" disabled>
                 Create Account
             </button>
 
@@ -115,6 +119,144 @@
         </div>
 
     </div>
+
+    <!-- TERMS AND CONDITIONS MODAL (read-only viewer, opened from the checkbox link) -->
+    <div class="modal-overlay" id="terms-modal">
+        <div class="modal" style="width:640px;max-width:95vw">
+            <div class="modal-title">
+                Terms and Conditions
+                <button class="modal-close" onclick="closeTermsModal()">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div style="max-height:60vh;overflow-y:auto;padding-right:8px;font-size:0.85rem;line-height:1.6;color:var(--muted2)">
+                <p style="font-size:0.75rem"><strong>Last Updated: August 29, 2026</strong></p>
+                <p>Welcome to <strong>LaundryMatic</strong>, an IoT-based smart weighing and laundry management system designed to assist laundry service providers and customers in managing laundry transactions, customer information, laundry weight, order status, and related services.</p>
+
+                <h4>1. Acceptance of Terms</h4>
+                <p>By accessing or using LaundryMatic, you confirm that you have read, understood, and agreed to these Terms and Conditions. If you do not agree with any part of these terms, you should not create an account or continue using the system.</p>
+
+                <h4>2. User Accounts</h4>
+                <p>Users are responsible for providing accurate and complete information when creating an account. Users are also responsible for keeping their account credentials, including their email address and password, secure and confidential.</p>
+                <p>Users must not share their account with unauthorized individuals or use another person's account without permission.</p>
+                <p>LaundryMatic reserves the right to suspend or restrict access to accounts that are found to contain false information, unauthorized activity, or misuse of the system.</p>
+
+                <h4>3. Smart Weighing System</h4>
+                <p>LaundryMatic uses an IoT-based weighing system to record the weight of laundry items. The recorded weight may be used to calculate laundry charges based on the pricing and minimum charge settings established by the laundry service provider.</p>
+                <p>Users should ensure that the laundry items are properly placed on the weighing scale before the weight is recorded.</p>
+                <p>In case of technical errors, sensor inaccuracies, or system interruptions, the laundry service provider may verify and manually adjust the recorded weight when necessary.</p>
+
+                <h4>4. Laundry Charges and Payments</h4>
+                <p>Laundry charges are calculated based on the weight of the laundry and the pricing rules set by the laundry service provider.</p>
+                <p>A minimum charge may apply even if the recorded laundry weight is below the minimum weight required for the standard rate.</p>
+                <p>Payment may be classified as either:</p>
+                <ul>
+                    <li><strong>Pay Now</strong> — The customer pays for the laundry service during the transaction or before the order is processed.</li>
+                    <li><strong>Pay Later</strong> — The customer pays for the laundry service at the time specified by the laundry service provider, such as upon claiming or receiving the laundry.</li>
+                </ul>
+                <p>The payment status and transaction records may be stored in the system for monitoring and reporting purposes.</p>
+
+                <h4>5. Laundry Collection and Pickup</h4>
+                <p>Customers are responsible for providing the correct information when submitting or registering their laundry order.</p>
+                <p>Laundry should be collected or picked up within the period specified by the laundry service provider. Customers may be required to present the appropriate QR code, account information, receipt, or other verification method before their laundry is released.</p>
+                <p>LaundryMatic may record the pickup status of an order to confirm that the customer has successfully claimed their laundry.</p>
+
+                <h4>6. User Responsibilities</h4>
+                <p>Users agree to use LaundryMatic only for its intended purpose. Users must not:</p>
+                <ul>
+                    <li>Provide false or misleading information.</li>
+                    <li>Attempt to access another user's account without permission.</li>
+                    <li>Interfere with, modify, damage, or disrupt the system.</li>
+                    <li>Attempt to manipulate laundry weight, payment records, order status, or other system data.</li>
+                    <li>Use the system for fraudulent, illegal, or unauthorized activities.</li>
+                </ul>
+
+                <h4>7. QR Codes</h4>
+                <p>LaundryMatic may use QR codes for customer identification, account verification, laundry order tracking, payment processing, or pickup verification.</p>
+                <p>Users are responsible for keeping their personal or transaction-related QR codes secure and should not share them with unauthorized individuals.</p>
+                <p>The system may verify QR code information before completing a transaction or releasing a laundry order.</p>
+
+                <h4>8. System Availability</h4>
+                <p>LaundryMatic is an IoT-based system and may depend on hardware devices, sensors, internet connectivity, databases, and other technologies.</p>
+                <p>The system may occasionally experience delays, interruptions, maintenance periods, technical issues, or hardware and network failures.</p>
+                <p>LaundryMatic does not guarantee that all services and features will always be available without interruption. In case of a technical issue, authorized personnel may perform manual verification or correction of relevant transaction information.</p>
+
+                <h4>9. Limitation of Liability</h4>
+                <p>LaundryMatic is designed to assist in managing laundry services and automating certain processes. The system should not be solely relied upon in situations where manual verification is necessary.</p>
+                <p>The LaundryMatic developers and system administrators are not responsible for losses or damages resulting from unauthorized account access caused by users sharing their credentials, incorrect information provided by users, misuse of the system, technical interruptions, internet failures, or hardware malfunctions.</p>
+
+                <h4>10. Changes to the Terms and Conditions</h4>
+                <p>LaundryMatic may update or modify these Terms and Conditions when necessary to improve the system or reflect changes in its features and operations.</p>
+                <p>Users may be required to review and accept the updated Terms and Conditions before continuing to use the system.</p>
+
+                <h4>11. Acceptance</h4>
+                <p>By checking the "I have read and agree to the Terms and Conditions" checkbox, you confirm that you have read, understood, and agreed to all the terms stated above.</p>
+                <p>If you do not agree to these Terms and Conditions, you should not proceed with creating an account or using the LaundryMatic system.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeTermsModal()">Close</button>
+            </div>
+        </div>
+    </div><!-- /terms-modal -->
+
+    <!-- PRIVACY NOTICE MODAL (read-only viewer, opened from the checkbox link) -->
+    <div class="modal-overlay" id="privacy-modal">
+        <div class="modal" style="width:640px;max-width:95vw">
+            <div class="modal-title">
+                Privacy Notice
+                <button class="modal-close" onclick="closePrivacyModal()">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div style="max-height:60vh;overflow-y:auto;padding-right:8px;font-size:0.85rem;line-height:1.6;color:var(--muted2)">
+                <p style="font-size:0.75rem"><strong>Last Updated: August 29, 2026</strong></p>
+
+                <h4>1. Introduction</h4>
+                <p>LaundryMatic is designed to process personal information in accordance with applicable data privacy principles and requirements under Republic Act No. 10173, otherwise known as the Data Privacy Act of 2012. This Privacy Notice explains what personal information LaundryMatic collects, why it is collected, how it is stored, and the rights you have over it.</p>
+                <p>LaundryMatic processes personal information in line with the principles of <strong>Transparency</strong> (you are informed about how your information is used), <strong>Legitimate Purpose</strong> (information is only used for purposes disclosed to you), and <strong>Proportionality</strong> (only information reasonably necessary for those purposes is collected).</p>
+
+                <h4>2. Personal Information Collected</h4>
+                <p>Depending on how you use LaundryMatic, the system may collect: your full name, contact number(s), email address, account login information, address, an optional linked social media account (for customer registration), laundry order details, laundry weight recorded by the IoT weighing system, service type, payment status, order status, pickup/collection records, and QR code or account identification information.</p>
+
+                <h4>3. Purpose of Processing</h4>
+                <p>Personal information is processed to: create and manage user accounts, authenticate users at login, identify and manage customer registrations, process and manage laundry job orders, record laundry weight from the weighing system, calculate laundry charges, record payment and order status, verify laundry pickup, generate transaction records and reports, provide technical support, and maintain the security and proper operation of the system.</p>
+
+                <h4>4. Collection and Processing of Personal Information</h4>
+                <p>Information is collected directly from you when you register an account, submit a laundry order, or interact with system features such as QR code scanning. Some information — such as laundry weight — is captured automatically through the IoT smart weighing system as part of processing your order.</p>
+
+                <h4>5. Data Storage and Firebase Services</h4>
+                <p>LaundryMatic uses Firebase Authentication to manage account login, and Firebase Realtime Database to store account and transaction information. Personal information and system data are stored and processed through these Google Firebase cloud services, and are not stored solely on your local device.</p>
+
+                <h4>6. Access to Personal Information</h4>
+                <p>Access to personal information is limited to authorized personnel — such as laundry shop administrators and staff — who need access for legitimate system and laundry service purposes, such as processing your order or validating your account.</p>
+
+                <h4>7. Data Protection and Security</h4>
+                <p>LaundryMatic implements reasonable technical and organizational measures appropriate to the system's actual design and available security controls to help protect personal information against unauthorized access, alteration, disclosure, loss, or misuse. You are responsible for keeping your account password and login credentials confidential and secure.</p>
+
+                <h4>8. Data Retention</h4>
+                <p>Personal information is retained only for as long as necessary for the purposes described in this Privacy Notice, for ongoing system operations, transaction record-keeping, or other applicable requirements. LaundryMatic does not currently have an automatic data deletion schedule; when information is no longer necessary, it may be deleted, anonymized, or otherwise appropriately managed according to applicable requirements and the system's actual capabilities at that time.</p>
+
+                <h4>9. Data Subject Rights</h4>
+                <p>Subject to applicable law, you have the right to be informed about how your personal information is processed, to access the personal information LaundryMatic holds about you, to request correction of inaccurate or incomplete information, to object to certain processing, to withdraw consent where processing is based on consent, and to lodge a complaint with the appropriate authority, including the National Privacy Commission, where applicable. LaundryMatic does not currently offer a self-service tool to view, edit, or delete your account information directly — to exercise these rights, please contact the system administrator.</p>
+
+                <h4>10. Consent and Withdrawal of Consent</h4>
+                <p>Where processing of your personal information is based on your consent, you may withdraw that consent at any time by contacting the system administrator. Please note that withdrawing consent may affect your ability to use features of LaundryMatic that require that information, such as identifying your laundry orders.</p>
+
+                <h4>11. Changes to the Privacy Notice</h4>
+                <p>LaundryMatic may update this Privacy Notice when necessary to reflect changes in its features, operations, or applicable legal requirements. You may be required to review and acknowledge an updated Privacy Notice before continuing to use the system.</p>
+
+                <h4>12. Contact Information</h4>
+                <p>For questions about this Privacy Notice or to exercise your data subject rights, please contact the laundry shop administrator directly.</p>
+
+                <h4>13. Acknowledgment</h4>
+                <p>By checking the acknowledgment checkbox, you confirm that you have read and understood this Privacy Notice, and, where required, consent to the collection and processing of your personal information as described above.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closePrivacyModal()">Close</button>
+            </div>
+        </div>
+    </div><!-- /privacy-modal -->
+
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>

@@ -33,7 +33,7 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showQR, setShowQR] = useState(false);
-  const [originalBrightness, setOriginalbrightness] = useState(null);
+  const [originalBrightness, setOriginalBrightness] = useState(null);
   const [username, setUsername] = useState('');
 
   useEffect(() => {
@@ -218,8 +218,10 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {/* Show QR button if still pending */}
-        {customer?.status === 'pending' && (
+        {/* Show QR button if not yet approved — matches the same
+            condition the status card above already uses, so the
+            button and the card can never disagree about state */}
+        {customer && customer.status !== 'approved' && (
           <TouchableOpacity
             style={styles.showQRBtn}
             onPress={() => router.push({

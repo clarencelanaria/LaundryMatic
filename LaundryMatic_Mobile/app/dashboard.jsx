@@ -16,6 +16,7 @@ import {
 } from 'lucide-react-native';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth, hasCompletedAllAgreements, getOrdersForUser, getCustomerById } from '../utils/firebase';
+import { registerForPushNotifications } from '../utils/notifications';
 
 // Status display config
 const STATUS_CONFIG = {
@@ -80,7 +81,13 @@ export default function DashboardScreen() {
         return;
       }
 
-      setCustomer({ id: uid, ...profile });
+            setCustomer({ id: uid, ...profile });
+
+      // Register for push notifications — fire-and-forget so a
+      // permission denial or missing device never blocks the dashboard
+      registerForPushNotifications(uid).catch(err =>
+          console.warn('Push registration failed:', err)
+      );
 
       const userOrders = await getOrdersForUser(uid);
       setOrders(userOrders || []);

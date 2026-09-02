@@ -49,6 +49,12 @@ export async function hasAcceptedCurrentTerms(uid) {
     return !!(profile && profile.termsAccepted === true && profile.termsVersion === CURRENT_TERMS_VERSION);
 }
 
+// Saves this device's Expo push token to the customer's profile —
+// the Cloud Function reads this to know where to send push notifications
+export async function savePushToken(uid, token) {
+    await update(ref(db, `users/${uid}`), { pushToken: token });
+}
+
 export async function hasAcknowledgedCurrentPrivacy(uid) {
     const snap = await get(ref(db, `users/${uid}`));
     const profile = snap.val();

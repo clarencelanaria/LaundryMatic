@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "367190879892",
+    "firebase_url": "https://laundrymatic-51608-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "laundrymatic-51608",
+    "storage_bucket": "laundrymatic-51608.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:367190879892:android:de0cfcad198a2658d2ce81",
+        "android_client_info": {
+          "package_name": "com.laundrymatic.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC3LKPe5BnLEs9p8V8M1R4lcCiwHd52dVM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

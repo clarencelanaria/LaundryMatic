@@ -182,7 +182,7 @@ async function getSettings() {
 }
 
 async function saveSettingsToFirebase(settings) {
-    await db.ref('settings').set(settings);
+    await db.ref('settings').update(settings);
 }
 
 // ── REALTIME LISTENERS ───────────────────────────────────────

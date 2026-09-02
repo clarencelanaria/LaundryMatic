@@ -24,3 +24,11 @@ Thumbs.db
 # Logs
 npm-debug.log*
 *.log
+
+# Firebase service account credentials
+*-firebase-adminsdk-*.json
+firebase-admin*.json
+serviceAccountKey.json
+
+# Google service account keys
+laundrymatic-51608-firebase-adminsdk-fbsvc-529ab3596e.json

@@ -397,21 +397,58 @@
 
             <div style="max-width:600px">
                 <div class="table-card">
-                    <div class="table-head">
-                        <div class="card-title">Pricing Configuration</div>
-                    </div>
-                    <div style="padding:20px 22px">
-                        <div class="form-group">
-                            <label class="form-label">Rate per kilogram (₱)</label>
-                            <input class="form-input" type="number" step="0.01" id="rate-input" value="65.00">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Minimum price per transaction (₱)</label>
-                            <input class="form-input" type="number" step="0.01" id="min-charge-input" value="75.00">
-                        </div>
-                        <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
-                    </div>
-                </div>
+    <div class="table-head">
+        <div class="card-title">Pricing Configuration</div>
+    </div>
+    <div style="padding:20px 22px">
+
+        <div class="form-group">
+            <label class="form-label">Active Pricing Mode</label>
+            <div class="payment-toggle">
+                <button type="button" class="payment-option-btn active" id="pricing-mode-flat-btn" onclick="setPricingMode('flat')">Previous Pricing</button>
+                <button type="button" class="payment-option-btn" id="pricing-mode-tiered-btn" onclick="setPricingMode('tiered')">New Tiered Pricing</button>
+            </div>
+        </div>
+
+        <div style="height:1px;background:var(--border);margin:20px 0"></div>
+
+        <div class="card-subtitle" style="margin-bottom:12px;font-weight:600">Previous Pricing (Flat Rate)</div>
+        <div class="form-group">
+            <label class="form-label">Rate per kilogram (₱)</label>
+            <input class="form-input" type="number" step="0.01" id="rate-input" value="65.00">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Minimum price per transaction (₱)</label>
+            <input class="form-input" type="number" step="0.01" id="min-charge-input" value="75.00">
+        </div>
+
+        <div style="height:1px;background:var(--border);margin:20px 0"></div>
+
+        <div class="card-subtitle" style="margin-bottom:12px;font-weight:600">New Tiered Pricing</div>
+        <div class="form-group">
+            <label class="form-label">Minimum / Base Price (₱)</label>
+            <input class="form-input" type="number" step="0.01" id="tiered-base-price-input" value="150.00">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Starting Kilogram — extra charge begins after this weight (kg)</label>
+            <input class="form-input" type="number" step="0.1" id="tiered-start-kg-input" value="7">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Extra Price per Kilogram (₱)</label>
+            <input class="form-input" type="number" step="0.01" id="tiered-extra-per-kg-input" value="25.00">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Maximum Kilogram — weight is capped here for pricing (kg)</label>
+            <input class="form-input" type="number" step="0.1" id="tiered-max-kg-input" value="15">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Maximum Price — absolute ceiling regardless of weight (₱)</label>
+            <input class="form-input" type="number" step="0.01" id="tiered-max-price-input" value="375.00">
+        </div>
+
+        <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+    </div>
+</div>
             </div>
 
         </div><!-- /page-settings -->

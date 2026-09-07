@@ -51,19 +51,163 @@ const WRITE_THROTTLE_MS = 1000;  // 1 second
 
 // ── SERIAL PORT SETUP ──────────────────────────────────────────
 
-const port  = new SerialPort({ path: SERIAL_PORT, baudRate: BAUD_RATE });
-const parser = port.pipe(new ReadlineParser({ delimiter: '\n' }));
+// ── SERIAL PORT / AUTO-RECONNECT ─────────────────────────────────
 
-port.on('open', () => {
-  console.log(`✅ Serial port ${SERIAL_PORT} opened`);
-  console.log('⏳ Waiting for weight readings...');
-  console.log(`📏 Threshold: ${WEIGHT_THRESHOLD} kg`);
-  console.log(`🕐 History TTL: ${HISTORY_TTL_MS / 3600000} hour(s)`);
-});
+let port = null;
+let parser = null;
+let reconnectTimer = null;
+let isConnecting = false;
 
-port.on('error', err => {
-  console.error('❌ Serial port error:', err.message);
-});
+const RECONNECT_DELAY_MS = 5000; // Try again every 5 seconds
+
+function connectSerial() {
+  // Prevent multiple connection attempts at the same time
+  if (isConnecting) return;
+
+  isConnecting = true;
+
+  console.log(`🔌 Attempting to connect to ${SERIAL_PORT}...`);
+
+  // Create a new SerialPort connection
+  try {
+    port = new SerialPort({
+      path: SERIAL_PORT,
+      baudRate: BAUD_RATE,
+      autoOpen: false
+    });
+
+    parser = port.pipe(
+      new ReadlineParser({ delimiter: '\n' })
+    );
+
+    // ── Successful connection ────────────────────────────────
+    port.open(err => {
+      isConnecting = false;
+
+      if (err) {
+        console.error(`❌ Could not open ${SERIAL_PORT}:`, err.message);
+        scheduleReconnect();
+        return;
+      }
+
+      console.log(`✅ Serial port ${SERIAL_PORT} opened`);
+      console.log('⏳ Waiting for weight readings...');
+      console.log(`📏 Threshold: ${WEIGHT_THRESHOLD} kg`);
+      console.log(`🕐 History TTL: ${HISTORY_TTL_MS / 3600000} hour(s)`);
+    });
+
+    // ── Serial data ───────────────────────────────────────────
+    parser.on('data', handleArduinoData);
+
+    // ── Serial error ──────────────────────────────────────────
+    port.on('error', err => {
+      console.error('❌ Serial port error:', err.message);
+    });
+
+    // ── Arduino disconnected ─────────────────────────────────
+    port.on('close', () => {
+      console.log(`🔌 Serial port ${SERIAL_PORT} closed`);
+
+      isConnecting = false;
+
+      // Mark scale as inactive
+      scaleActive = false;
+      lastWeight = 0;
+
+      // Tell Firebase that the scale is currently unavailable
+      db.ref('liveWeight').set({
+        kg: 0,
+        active: false,
+        connected: false,
+        updatedAt: new Date().toISOString()
+      }).catch(err => {
+        console.error('❌ Failed to update Firebase:', err.message);
+      });
+
+      scheduleReconnect();
+    });
+
+  } catch (err) {
+    isConnecting = false;
+
+    console.error('❌ Serial connection error:', err.message);
+
+    scheduleReconnect();
+  }
+}
+
+
+// ── RECONNECT ───────────────────────────────────────────────────
+
+function scheduleReconnect() {
+  // Don't create multiple reconnect timers
+  if (reconnectTimer) return;
+
+  console.log(`🔄 Retrying ${SERIAL_PORT} in ${RECONNECT_DELAY_MS / 1000} seconds...`);
+
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    connectSerial();
+  }, RECONNECT_DELAY_MS);
+}
+
+
+// ── ARDUINO DATA HANDLER ────────────────────────────────────────
+
+async function handleArduinoData(line) {
+  const raw = line.trim();
+
+  if (!raw) return;
+
+  const weight = extractWeight(raw);
+
+  if (weight === null || Number.isNaN(weight)) {
+    console.log('Arduino:', raw);
+    return;
+  }
+
+  const now = Date.now();
+  const isActive = weight >= WEIGHT_THRESHOLD;
+
+  // Always update /liveWeight
+  if (now - lastWriteTime >= WRITE_THROTTLE_MS) {
+    lastWriteTime = now;
+
+    try {
+      await db.ref('liveWeight').set({
+        kg: weight,
+        active: isActive,
+        connected: true,
+        updatedAt: new Date().toISOString()
+      });
+
+      if (isActive) {
+        console.log(`⚖ Active: ${weight.toFixed(2)} kg`);
+      }
+    } catch (err) {
+      console.error('❌ Firebase write error:', err.message);
+    }
+  }
+
+  // Detect scale going active
+  if (isActive && !scaleActive) {
+    scaleActive = true;
+    console.log(`🟢 Scale activated — ${weight.toFixed(2)} kg detected`);
+  }
+
+  // Detect scale going idle
+  if (!isActive && scaleActive) {
+    scaleActive = false;
+    console.log('⚪ Scale back to idle');
+
+    if (stableTimer) {
+      clearTimeout(stableTimer);
+      stableTimer = null;
+    }
+  }
+
+  lastWeight = weight;
+}
 
 // ── MAIN DATA HANDLER ──────────────────────────────────────────
 
@@ -93,57 +237,6 @@ function extractWeight(raw) {
   return match ? parseFloat(match[0]) : null;
 }
 
-// ── MAIN DATA HANDLER — now tolerant of both formats ─────────────
-parser.on('data', async line => {
-  const raw = line.trim();
-  if (!raw) return;
-
-  const weight = extractWeight(raw);
-
-  if (weight === null || Number.isNaN(weight)) {
-    // Genuinely not a weight reading — log and move on, don't crash
-    console.log('Arduino:', raw);
-    return;
-  }
-
-  const now      = Date.now();
-  const isActive = weight >= WEIGHT_THRESHOLD;
-
-  // ── Always update /liveWeight (just one record, no history) ──
-  // Throttle to avoid hammering Firebase every 500ms
-  if (now - lastWriteTime >= WRITE_THROTTLE_MS) {
-    lastWriteTime = now;
-
-    await db.ref('liveWeight').set({
-      kg:        weight,
-      active:    isActive,
-      updatedAt: new Date().toISOString(),
-    });
-
-    if (isActive) {
-      console.log(`⚖  Active: ${weight.toFixed(2)} kg`);
-    }
-  }
-
-  // ── Detect scale going active (something placed on it) ──────
-  if (isActive && !scaleActive) {
-    scaleActive = true;
-    console.log(`🟢 Scale activated — ${weight.toFixed(2)} kg detected`);
-  }
-
-  // ── Detect scale going idle (item removed) ──────────────────
-  if (!isActive && scaleActive) {
-    scaleActive = false;
-    console.log('⚪ Scale back to idle');
-
-    if (stableTimer) {
-      clearTimeout(stableTimer);
-      stableTimer = null;
-    }
-  }
-
-  lastWeight = weight;
-});
 
 // ── SAVE WEIGHT SNAPSHOT ───────────────────────────────────────
 // Called by the web dashboard when admin creates an order
@@ -224,12 +317,25 @@ cleanupExpiredHistory();
 // Then run it on a schedule
 setInterval(cleanupExpiredHistory, CLEANUP_INTERVAL_MS);
 
+// Start Arduino connection
+connectSerial();
+
 // ── GRACEFUL SHUTDOWN ──────────────────────────────────────────
 
 process.on('SIGINT', () => {
-  console.log('\nShutting down...');
-  port.close(() => {
-    console.log('Serial port closed.');
+  console.log('\n🛑 Shutting down...');
+
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+
+  if (port && port.isOpen) {
+    port.close(() => {
+      console.log('🔌 Serial port closed.');
+      process.exit(0);
+    });
+  } else {
     process.exit(0);
-  });
+  }
 });

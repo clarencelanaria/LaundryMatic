@@ -73,19 +73,28 @@ async function createOrder(userId, orderData) {
 
     const now = new Date();
     const timestamp = now.getTime(); // Captured for history consistency
-    const timeIn = now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
-    const dateIn = now.toLocaleDateString('en-PH');
-
-    // Calculate finish time based on weight
-    const finish = calculateFinishTime(orderData.kg);
+    // Preserve offline-computed values if provided (a synced order
+    // keeps the moment it was actually created, not the sync time) —
+    // falls back to computing fresh, exactly as before, for every
+    // normal online order
+    const timeIn = orderData.timeIn || now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
+    const dateIn = orderData.dateIn || now.toLocaleDateString('en-PH');
+    const finish = orderData.estimatedFinish
+        ? {
+            estimatedFinish: orderData.estimatedFinish,
+            estimatedFinishTime: orderData.estimatedFinishTime,
+            estimatedFinishDate: orderData.estimatedFinishDate,
+            hours: orderData.estimatedHours,
+          }
+        : calculateFinishTime(orderData.kg);
 
     // Save order data
     await newRef.set({
         ...orderData,
         orderId,
         userId,
-        transactionCode: generateTransactionCode(),
-        status: 'washing',
+        transactionCode: orderData.transactionCode || generateTransactionCode(),
+        status: orderData.status || 'washing',
         dateIn,
         timeIn,
         estimatedFinish: finish.estimatedFinish,
@@ -93,9 +102,9 @@ async function createOrder(userId, orderData) {
         estimatedFinishDate: finish.estimatedFinishDate,
         estimatedHours: finish.hours,
         orderQR: orderId,
-        createdAt: now.toISOString(),
+        createdAt: orderData.createdAt || now.toISOString(),
     });
-
+    
     // Save ONE weight snapshot per order — with auto-expiry tracking
     await db.ref('weightHistory').push({
         kg: orderData.kg,
@@ -240,6 +249,11 @@ async function markNotificationRead(userId, notifId) {
     await db.ref(`notifications/${userId}/${notifId}`).update({ read: true });
 }
 
+// Marks one notification back to unread — mirrors markNotificationRead
+async function markNotificationUnread(userId, notifId) {
+    await db.ref(`notifications/${userId}/${notifId}`).update({ read: false });
+}
+
 // ── CUSTOMER VALIDATION ──────────────────────────────────────
 
 // Gets all customers with status = 'pending' (not yet validated)
@@ -314,4 +328,56 @@ async function sendNotificationToUser(userId, title, body, data = {}) {
         read: false,
         createdAt: new Date().toISOString(),
     });
+}
+
+// ── CONNECTIVITY STATE ───────────────────────────────────────
+function listenToConnectionState(callback) {
+    db.ref('.info/connected').on('value', snap => {
+        callback(snap.val() === true);
+    });
+}
+
+// ── OFFLINE PENDING ORDERS QUEUE ─────────────────────────────
+// localStorage survives a reload/restart — RTDB's own offline
+// cache is memory-only and would be lost in a real brownout.
+const PENDING_ORDERS_KEY = 'lm_pending_orders';
+
+function getPendingOrders() {
+    const data = localStorage.getItem(PENDING_ORDERS_KEY);
+    return data ? JSON.parse(data) : [];
+}
+
+function savePendingOrder(order) {
+    const pending = getPendingOrders();
+    pending.push(order);
+    localStorage.setItem(PENDING_ORDERS_KEY, JSON.stringify(pending));
+}
+
+function removePendingOrder(localId) {
+    const pending = getPendingOrders().filter(o => o.localId !== localId);
+    localStorage.setItem(PENDING_ORDERS_KEY, JSON.stringify(pending));
+}
+
+// ── OFFLINE CUSTOMER CACHE ────────────────────────────────────
+// Refreshed opportunistically whenever a customer list is
+// successfully fetched while online — read from when offline so
+// scanning/searching a KNOWN customer still works mid-outage.
+const CUSTOMER_CACHE_KEY = 'lm_customer_cache';
+
+function updateCustomerCache(customers) {
+    const map = {};
+    customers.forEach(c => { map[c.id] = c; });
+    localStorage.setItem(CUSTOMER_CACHE_KEY, JSON.stringify(map));
+}
+
+function getCachedCustomer(userId) {
+    const data = localStorage.getItem(CUSTOMER_CACHE_KEY);
+    const map = data ? JSON.parse(data) : {};
+    return map[userId] || null;
+}
+
+function getCachedCustomers() {
+    const data = localStorage.getItem(CUSTOMER_CACHE_KEY);
+    const map = data ? JSON.parse(data) : {};
+    return Object.values(map);
 }

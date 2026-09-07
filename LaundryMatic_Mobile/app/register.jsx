@@ -113,16 +113,14 @@ export default function RegisterScreen() {
         setLoading(true);
 
         try {
-            // ── Duplicate contact check against Firebase ─────────────
-            const duplicateCustomer = await checkDuplicateContact(contact1);
-            if (duplicateCustomer) {
-                setError('This contact number is already registered to another account.');
-                setLoading(false);
-                return;
-            }
+      // Duplicate-contact checking now happens on the admin side
+      // during validation (validateCustomer() already warns the
+      // admin) — a pre-signup check here would need an unauthenticated
+      // client to read the whole customer list, which the security
+      // rules correctly no longer allow.
 
-            // "username" holds an email — this creates the real Firebase Auth account
-            const cred = await createUserWithEmailAndPassword(auth, username, password);
+      // "username" holds an email — this creates the real Firebase Auth account
+      const cred = await createUserWithEmailAndPassword(auth, username, password);
 
             // Customer profile keyed by the same uid as the auth account
             await registerCustomerMobile(cred.user.uid, {

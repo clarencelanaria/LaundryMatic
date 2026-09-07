@@ -94,13 +94,19 @@
                 <div class="scan-input-wrap" id="scan-wrap">
                     <div class="live-dot"></div>
                     <input class="scan-input" type="text" id="scan-input"
-                           placeholder="Scan customer or job order QR..."
-                           onchange="handleQRScan(this.value)" autocomplete="off">
+       placeholder="Scan customer or job order QR..."
+       onkeydown="if (event.key === 'Enter') handleQRScan(this.value)"
+       autocomplete="off">
                 </div>
 
                 <div class="sensor-indicator">
                     <div class="live-dot"></div>
                     Sensor Active
+                </div>
+
+                                <div class="sensor-indicator" id="offline-indicator-pill" style="display:none;background:rgba(244,74,106,0.08);border-color:rgba(244,74,106,0.25);color:var(--danger)">
+                    <div class="live-dot" style="background:var(--danger)"></div>
+                    Offline — Saving Locally
                 </div>
 
                 <!-- Always-visible live weight — replaces the old removed gauge widget -->
@@ -395,61 +401,98 @@
         <!-- ── SETTINGS PAGE ──────────────────────────── -->
         <div class="content page" id="page-settings">
 
-            <div style="max-width:600px">
-                <div class="table-card">
-    <div class="table-head">
-        <div class="card-title">Pricing Configuration</div>
-    </div>
-    <div style="padding:20px 22px">
+                        <div class="settings-wrap">
 
-        <div class="form-group">
-            <label class="form-label">Active Pricing Mode</label>
+    <!-- Active Pricing Mode toggle -->
+    <div class="table-card" style="margin-bottom:20px">
+        <div class="table-head">
+            <div class="card-title">Pricing Mode</div>
+        </div>
+        <div style="padding:20px 22px">
+            <div class="card-subtitle" style="margin-bottom:12px">
+                Choose which pricing system is used to calculate new job order costs. Both configurations below stay saved and editable no matter which one is active.
+            </div>
             <div class="payment-toggle">
                 <button type="button" class="payment-option-btn active" id="pricing-mode-flat-btn" onclick="setPricingMode('flat')">Previous Pricing</button>
                 <button type="button" class="payment-option-btn" id="pricing-mode-tiered-btn" onclick="setPricingMode('tiered')">New Tiered Pricing</button>
             </div>
         </div>
-
-        <div style="height:1px;background:var(--border);margin:20px 0"></div>
-
-        <div class="card-subtitle" style="margin-bottom:12px;font-weight:600">Previous Pricing (Flat Rate)</div>
-        <div class="form-group">
-            <label class="form-label">Rate per kilogram (₱)</label>
-            <input class="form-input" type="number" step="0.01" id="rate-input" value="65.00">
-        </div>
-        <div class="form-group">
-            <label class="form-label">Minimum price per transaction (₱)</label>
-            <input class="form-input" type="number" step="0.01" id="min-charge-input" value="75.00">
-        </div>
-
-        <div style="height:1px;background:var(--border);margin:20px 0"></div>
-
-        <div class="card-subtitle" style="margin-bottom:12px;font-weight:600">New Tiered Pricing</div>
-        <div class="form-group">
-            <label class="form-label">Minimum / Base Price (₱)</label>
-            <input class="form-input" type="number" step="0.01" id="tiered-base-price-input" value="150.00">
-        </div>
-        <div class="form-group">
-            <label class="form-label">Starting Kilogram — extra charge begins after this weight (kg)</label>
-            <input class="form-input" type="number" step="0.1" id="tiered-start-kg-input" value="7">
-        </div>
-        <div class="form-group">
-            <label class="form-label">Extra Price per Kilogram (₱)</label>
-            <input class="form-input" type="number" step="0.01" id="tiered-extra-per-kg-input" value="25.00">
-        </div>
-        <div class="form-group">
-            <label class="form-label">Maximum Kilogram — weight is capped here for pricing (kg)</label>
-            <input class="form-input" type="number" step="0.1" id="tiered-max-kg-input" value="15">
-        </div>
-        <div class="form-group">
-            <label class="form-label">Maximum Price — absolute ceiling regardless of weight (₱)</label>
-            <input class="form-input" type="number" step="0.01" id="tiered-max-price-input" value="375.00">
-        </div>
-
-        <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
     </div>
-</div>
+
+    <!-- Both pricing configurations side by side — no scrolling
+         needed to compare or edit either one -->
+    <div class="pricing-columns">
+
+        <!-- Previous Pricing (Flat Rate) -->
+        <div class="table-card pricing-column-card">
+            <div class="table-head">
+                <div>
+                    <div class="card-title" style="display:flex;align-items:center;gap:8px">
+                        Previous Pricing (Flat Rate)
+                        <span class="nav-badge" id="pricing-flat-active-badge" style="background:var(--accent);display:inline-flex">ACTIVE</span>
+                    </div>
+                    <div class="card-subtitle">The original system — a rate per kilogram with a minimum charge.</div>
+                </div>
             </div>
+            <div style="padding:20px 22px">
+                <div class="form-group">
+                    <label class="form-label">Rate per Kilogram (₱)</label>
+                    <input class="form-input" type="number" step="0.01" id="rate-input" value="65.00">
+                    <div class="field-hint">Amount charged for every kilogram of laundry.</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Minimum Price per Transaction (₱)</label>
+                    <input class="form-input" type="number" step="0.01" id="min-charge-input" value="75.00">
+                    <div class="field-hint">Lowest amount ever charged, even for very light loads.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Tiered Pricing -->
+        <div class="table-card pricing-column-card">
+            <div class="table-head">
+                <div>
+                    <div class="card-title" style="display:flex;align-items:center;gap:8px">
+                        New Tiered Pricing
+                        <span class="nav-badge" id="pricing-tiered-active-badge" style="background:var(--accent);display:none">ACTIVE</span>
+                    </div>
+                    <div class="card-subtitle">A flat base price up to a starting weight, then a per-kilogram charge, capped at a maximum price.</div>
+                </div>
+            </div>
+            <div style="padding:20px 22px">
+                <div class="form-group">
+                    <label class="form-label">Minimum / Base Price (₱)</label>
+                    <input class="form-input" type="number" step="0.01" id="tiered-base-price-input" value="150.00">
+                    <div class="field-hint">Flat price charged up to the Starting Kilogram.</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Starting Kilogram (kg)</label>
+                    <input class="form-input" type="number" step="0.1" id="tiered-start-kg-input" value="7">
+                    <div class="field-hint">Extra charges begin after this weight.</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Extra Price per Kilogram (₱)</label>
+                    <input class="form-input" type="number" step="0.01" id="tiered-extra-per-kg-input" value="25.00">
+                    <div class="field-hint">Amount added for every kilogram above the Starting Kilogram.</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Maximum Kilogram (kg)</label>
+                    <input class="form-input" type="number" step="0.1" id="tiered-max-kg-input" value="15">
+                    <div class="field-hint">Highest weight used for the normal tiered calculation.</div>
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label">Maximum Price (₱)</label>
+                    <input class="form-input" type="number" step="0.01" id="tiered-max-price-input" value="375.00">
+                    <div class="field-hint">Highest amount the customer can ever be charged — used for any weight above the Maximum Kilogram.</div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /pricing-columns -->
+
+    <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+
+</div>
 
         </div><!-- /page-settings -->
 
@@ -1031,7 +1074,7 @@
 
     <!-- CUSTOMER PROFILE MODAL — opened by clicking name in table -->
     <div class="modal-overlay" id="customer-profile-modal">
-        <div class="modal" style="width:560px;max-width:95vw">
+    <div class="modal" style="width:640px;max-width:95vw">
             <div class="modal-title">
                 Customer Profile
                 <button class="modal-close" onclick="closeCustomerProfileModal()"><i data-lucide="x"></i></button>
@@ -1064,26 +1107,31 @@
                 </div>
             </div>
 
-            <!-- Order history -->
+                        <!-- Order history — wrapped in a fixed-height scroll box
+                 so a long history never stretches the modal past the
+                 screen. Service column removed (every order is
+                 currently Wash & Dry), which freed enough width for
+                 Action to display fully. -->
             <div class="table-card" style="margin-top:16px">
                 <div class="table-head" style="padding:12px 16px">
                     <div class="card-title" style="font-size:0.85rem">
                         Order History
                     </div>
                 </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Code</th>
-                            <th>Service</th>
-                            <th>Weight</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="cp-orders-body"></tbody>
-                </table>
+                <div style="max-height:260px;overflow-y:auto">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Weight</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cp-orders-body"></tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- QR and actions -->

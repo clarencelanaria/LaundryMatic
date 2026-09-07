@@ -2759,3 +2759,28 @@ select.form-input option {
   height: 300px;
   object-fit: contain;
 }
+
+/* ─── SETTINGS PAGE — SIDE-BY-SIDE PRICING LAYOUT ────────── */
+
+.settings-wrap {
+  max-width: 1100px;
+}
+
+.pricing-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.pricing-column-card {
+  margin-bottom: 20px;
+}
+
+/* Collapse back to one column on narrower screens so the form
+   fields never get uncomfortably squeezed */
+@media (max-width: 900px) {
+  .pricing-columns {
+    grid-template-columns: 1fr;
+  }
+}

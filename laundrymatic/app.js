@@ -119,14 +119,19 @@ function cost(w) {
 // TIERED_EXTRA_PER_KG. Weight is clamped to TIERED_MAX_KG and price is
 // clamped to TIERED_MAX_PRICE as two independent safety ceilings.
 function calculateTieredCost(w) {
-    const clampedWeight = Math.min(w, TIERED_MAX_KG);
     let price;
-    if (clampedWeight <= TIERED_START_KG) {
+    if (w <= TIERED_START_KG) {
         price = TIERED_BASE_PRICE;
-    } else {
-        const extraKg = Math.ceil(clampedWeight - TIERED_START_KG);
+    } else if (w <= TIERED_MAX_KG) {
+        const extraKg = Math.ceil(w - TIERED_START_KG);
         price = TIERED_BASE_PRICE + (extraKg * TIERED_EXTRA_PER_KG);
+    } else {
+        // Above Maximum Kilogram — charge the flat ceiling directly,
+        // never a value derived from the tiered formula
+        price = TIERED_MAX_PRICE;
     }
+    // Maximum Price is always the absolute ceiling, regardless of
+    // which branch above computed the price
     return Math.min(price, TIERED_MAX_PRICE);
 }
 
@@ -379,12 +384,29 @@ function renderNotifications(notifications) {
             text = n.title || 'Notification';
         }
 
+        // Clicking anywhere on the item marks it read — same pattern
+        // as the mobile app's notifications screen. The two buttons
+        // give explicit control either direction regardless of the
+        // current read state, and stop propagation so they don't
+        // also trigger the row's own click handler.
         return `
-      <div class="notif-item ${!n.read ? 'unread' : ''}">
+      <div class="notif-item ${!n.read ? 'unread' : ''}"
+           style="cursor:pointer"
+           onclick="markOneNotificationRead('${n.userId}', '${n.notifId}')">
         <div class="notif-dot ${dotClass}"></div>
-        <div>
+        <div style="flex:1;min-width:0">
           <div class="notif-text">${text}</div>
           <div class="notif-time">${formatRelativeTime(n.createdAt)}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0" onclick="event.stopPropagation()">
+          <button class="action-btn" title="Mark as read"
+                  onclick="markOneNotificationRead('${n.userId}', '${n.notifId}')">
+            ${icon('check', 13)}
+          </button>
+          <button class="action-btn" title="Mark as unread"
+                  onclick="markOneNotificationUnread('${n.userId}', '${n.notifId}')">
+            ${icon('circle', 13)}
+          </button>
         </div>
       </div>
     `;
@@ -448,6 +470,9 @@ function showPage(page, el) {
 }
 // Step 27: Chart Tab Switcher
 // ── DASHBOARD CHART — REAL DATA ─────────────────────────────
+
+let systemOnline = true;
+let isSyncing = false;
 
 // Cache of all orders — refreshed by loadOrders() and the realtime listener
 // Chart functions read from this instead of any hardcoded data
@@ -603,6 +628,16 @@ function startLiveWeight() {
         }
     });
 }
+
+        // ── OFFLINE / CONNECTIVITY TRACKING ───────────────────────
+        let wasOnline = true;
+        listenToConnectionState(online => {
+            systemOnline = online;
+            const pill = document.getElementById('offline-indicator-pill');
+            if (pill) pill.style.display = online ? 'none' : 'flex';
+            if (online && !wasOnline) syncPendingOrders();
+            wasOnline = online;
+        });
 //Step 29: Modal Logic
 // Opens the modal and auto-fills the weight from the live sensor
 
@@ -750,8 +785,46 @@ async function submitOrder() {
         submitBtn.textContent = 'Creating...';
     }
 
-    const s = document.getElementById('form-service').value;
+        const s = document.getElementById('form-service').value;
     const notes = document.getElementById('form-notes').value.trim();
+
+    if (!systemOnline) {
+        const now = new Date();
+        const finish = calculateFinishTime(w);
+        const pendingOrder = {
+            localId: 'local-' + now.getTime() + '-' + Math.random().toString(36).slice(2, 8),
+            userId: selectedCustomer.id,
+            customerName: `${selectedCustomer.firstName} ${selectedCustomer.lastName}`,
+            contact1: selectedCustomer.contact1 || '',
+            contact2: selectedCustomer.contact2 || '',
+            kg: w,
+            amount: cost(w),
+            service: s,
+            notes: notes,
+            paid: paymentOption === 'now',
+            transactionCode: generateTransactionCode(),
+            status: 'washing',
+            dateIn: now.toLocaleDateString('en-PH'),
+            timeIn: now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' }),
+            estimatedFinish: finish.estimatedFinish,
+            estimatedFinishTime: finish.estimatedFinishTime,
+            estimatedFinishDate: finish.estimatedFinishDate,
+            estimatedHours: finish.hours,
+            createdAt: now.toISOString(),
+        };
+
+        savePendingOrder(pendingOrder);
+        showToast('cloud-off', `Order saved offline for ${selectedCustomer.firstName}. Receipt will print once synced.`);
+        closeModal();
+        loadOrders();
+
+        isSubmittingOrder = false;
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Create Job Order';
+        }
+        return;
+    }
 
     try {
         const orderId = await createOrder(selectedCustomer.id, {
@@ -783,6 +856,42 @@ async function submitOrder() {
         }
     }
 }
+
+async function syncPendingOrders() {
+    if (isSyncing) return;
+    const pending = getPendingOrders();
+    if (pending.length === 0) return;
+
+    isSyncing = true;
+    showToast('cloud', `Syncing ${pending.length} offline order${pending.length > 1 ? 's' : ''}...`);
+
+    let succeeded = 0;
+    for (const order of pending) {
+        try {
+            const { localId, contact1, contact2, ...orderData } = order;
+            const orderId = await createOrder(order.userId, orderData);
+            const savedOrder = await db.ref(`orders/${orderId}`).once('value');
+
+            removePendingOrder(localId);
+            succeeded++;
+
+            // Prints only once the order is real — this is what keeps
+            // every printed QR scannable, since it never encodes a
+            // temporary local ID
+            autoPrintReceipt(savedOrder.val(), { contact1, contact2 });
+        } catch (err) {
+            console.error('Error syncing pending order:', order.localId, err);
+            // Stays in the queue — retried on the next reconnect
+        }
+    }
+
+    isSyncing = false;
+    if (succeeded > 0) {
+        showToast('check-circle-2', `${succeeded} offline order${succeeded > 1 ? 's' : ''} synced.`);
+        loadOrders();
+    }
+}
+
 //Step 30: Toast, Filter, and Other Actions
 // Shows a brief notification at the bottom-right for 3 seconds
 function showToast(iconName, msg) {
@@ -835,6 +944,27 @@ async function markAllRead() {
     }
 }
 
+// Marks one notification as read — no manual re-render needed
+// afterward, the live listener (listenToAllNotifications) fires
+// again automatically with the updated state, same as markAllRead()
+async function markOneNotificationRead(userId, notifId) {
+    try {
+        await markNotificationRead(userId, notifId);
+    } catch (err) {
+        showToast('alert-triangle', 'Error marking notification as read.');
+        console.error(err);
+    }
+}
+
+async function markOneNotificationUnread(userId, notifId) {
+    try {
+        await markNotificationUnread(userId, notifId);
+    } catch (err) {
+        showToast('alert-triangle', 'Error marking notification as unread.');
+        console.error(err);
+    }
+}
+
 // Advances an order through its status lifecycle
 // ── UPDATE STATUS TO FIREBASE ─────────────────────────────────
 
@@ -862,6 +992,11 @@ async function updateStatus(orderId) {
 // Opens the Order Scan Modal manually — reused for both QR scanning
 // and clicking a row in the table (replaces the old Update button)
 async function viewOrderDetails(orderId) {
+    if (orderId && orderId.startsWith('local-')) {
+        showToast('cloud-off', "This order hasn't synced yet.");
+        return;
+    }
+
     try {
         const snap  = await db.ref(`orders/${orderId}`).once('value');
         const order = snap.val();
@@ -937,6 +1072,8 @@ function setPricingMode(mode) {
     PRICING_MODE = mode;
     document.getElementById('pricing-mode-flat-btn').classList.toggle('active', mode === 'flat');
     document.getElementById('pricing-mode-tiered-btn').classList.toggle('active', mode === 'tiered');
+    document.getElementById('pricing-flat-active-badge').style.display = mode === 'flat' ? 'inline-flex' : 'none';
+    document.getElementById('pricing-tiered-active-badge').style.display = mode === 'tiered' ? 'inline-flex' : 'none';
 }
 
 
@@ -977,27 +1114,46 @@ async function handleQRScan(value) {
 
     showToast('search', 'Looking up scanned code...');
 
-    try {
-        const [orderSnap, customer] = await Promise.all([
-            db.ref(`orders/${qrValue}`).once('value'),
-            getCustomer(qrValue),
-        ]);
+        try {
+        let order = null;
+        let customer = null;
 
-        const order = orderSnap.val();
+        if (systemOnline) {
+            const [orderSnap, liveCustomer] = await Promise.all([
+                db.ref(`orders/${qrValue}`).once('value'),
+                getCustomer(qrValue),
+            ]);
+            order = orderSnap.val();
+            customer = liveCustomer;
+        } else {
+            // Offline — only a cached, previously-approved customer
+            // can be found. Job Order QR scans (status updates,
+            // pickup) aren't supported offline in this version.
+            customer = getCachedCustomer(qrValue);
+        }
 
-        // ── Job Order QR (scan 2) — auto-advance, zero click ──────
         if (order) {
             openOrderScanModal(qrValue, order);
             return;
         }
 
         if (!customer) {
-            showToast('alert-triangle', 'QR code not recognized.');
+            showToast('alert-triangle', systemOnline
+                ? 'QR code not recognized.'
+                : 'Customer not in offline cache — try again once back online.');
             return;
         }
 
         if (customer.status !== 'approved') {
             showToast('alert-triangle', `${customer.firstName} is not yet validated.`);
+            return;
+        }
+
+        if (!systemOnline) {
+            // Skip the ready/active-order lookup offline (needs a
+            // live query) — go straight to creating a new order,
+            // the core offline-supported action
+            openNewOrderFromScan(qrValue, customer);
             return;
         }
 
@@ -1145,14 +1301,28 @@ function closeOrderScanModal() {
     scannedOrderId = null;
 }
 
+// Marking an order "picked up" is also the moment a Pay Later order
+// gets paid — that's literally what "pay upon pickup" means. This
+// keeps Total Sales / Total Collectibles honest: a picked-up order
+// should never sit as unpaid forever just because nothing ever
+// flipped the `paid` flag. Pay Now orders are already `paid: true`,
+// so this is a harmless no-op re-write for those.
+async function markOrderPicked(orderId) {
+    await db.ref(`orders/${orderId}`).update({ status: 'picked', paid: true });
+}
+
 // Marks the order with the new status
 async function scanMarkStatus(orderId, newStatus) {
     if (pendingAutoAdvanceTimer) {
         clearTimeout(pendingAutoAdvanceTimer);
         pendingAutoAdvanceTimer = null;
     }
-  try {
-    await updateOrderStatus(orderId, newStatus);
+    try {
+    if (newStatus === 'picked') {
+        await markOrderPicked(orderId);
+    } else {
+        await updateOrderStatus(orderId, newStatus);
+    }
       showToast('check-circle-2', `Order marked as ${STATUS_LABELS[newStatus]}.`);
     closeOrderScanModal();
     loadOrders();
@@ -1257,7 +1427,7 @@ function closeProfileScanModal() {
 // Marks one order as picked up from inside the profile modal
 async function quickMarkPickedUp(orderId) {
   try {
-    await updateOrderStatus(orderId, 'picked');
+    await markOrderPicked(orderId);
       showToast('check-circle-2', 'Order marked as Picked Up.');
 
     // Refresh the profile modal with updated order data
@@ -1302,22 +1472,28 @@ function createOrderForCustomer(userId, customerName) {
 
 async function loadOrders() {
     const orders = await getAllOrders();
-    allOrdersCache = orders;   // cache for the chart to read from
+    allOrdersCache = orders;   // cache for the chart to read from — real orders only
 
-    const mapped = orders.map(o => ({
-        id:       o.transactionCode,
-        customer: o.customerName,
-        weight:   o.kg,
-        service:  o.service,
-        status:   o.status,
-        time:     o.timeIn,
-        orderId:  o.id,
+    // Locally-queued offline orders — shown in the table and counted
+    // in KPIs right away, but kept out of allOrdersCache/Records/Top
+    // Customers, which assume a real Firebase order id
+    const pendingOrders = getPendingOrders();
+
+    const mapped = [...pendingOrders, ...orders].map(o => ({
+        id:          o.transactionCode,
+        customer:    o.customerName,
+        weight:      o.kg,
+        service:     o.service,
+        status:      o.status,
+        time:        o.timeIn,
+        orderId:     o.id || o.localId,
+        pendingSync: !!o.localId,
     }));
 
     renderOrders('orders-body',      mapped.slice(0, 10));
     renderOrders('orders-body-full', mapped);
 
-    updateDashboardKPIs(orders);
+    updateDashboardKPIs([...pendingOrders, ...orders]);
     updateStatusOverview(orders);
     updateUnclaimedLaundry(orders);
     renderTopCustomers(orders);
@@ -1343,8 +1519,14 @@ async function searchCustomers(query) {
     return;
   }
 
-  // Get all customers from Firebase
-  const customers = await getAllCustomers();
+    // Get all customers — Firebase when online, offline cache otherwise
+  let customers;
+  if (systemOnline) {
+      customers = await getAllCustomers();
+      updateCustomerCache(customers);
+  } else {
+      customers = getCachedCustomers();
+  }
 
   // Filter by name or contact number — case insensitive
   const q = query.toLowerCase();
@@ -1381,8 +1563,11 @@ async function searchCustomers(query) {
 
 // Called when a customer row is clicked in the dropdown
 async function selectCustomer(customerId) {
-  // Fetch fresh customer data from Firebase
-  const customer = await getCustomer(customerId);
+  // Fresh Firebase read when online; fall back to the cached
+  // copy when offline, matching handleQRScan()'s same pattern
+  const customer = systemOnline
+      ? await getCustomer(customerId)
+      : getCachedCustomer(customerId);
   if (!customer) return;
 
   // Store selected customer globally so submitOrder() can use it
@@ -1537,6 +1722,7 @@ async function loadPendingCustomers() {
 
 async function loadApprovedCustomers() {
   const customers = await getApprovedCustomers();
+  updateCustomerCache(customers);
   const el = document.getElementById('customers-body');
   if (!el) return;
 
@@ -2026,7 +2212,7 @@ async function autoAdvanceJobOrder(orderId, order) {
 async function autoCompletePickup(userId, customer, readyOrders) {
     try {
         await Promise.all(
-            readyOrders.map(o => updateOrderStatus(o.id, 'picked'))
+            readyOrders.map(o => markOrderPicked(o.id))
         );
         const label = readyOrders.length > 1
             ? `${readyOrders.length} orders`
@@ -2090,22 +2276,19 @@ async function openCustomerProfileModal(userId) {
     if (orders.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="6"
+          <td colspan="5"
               style="text-align:center;
                      color:var(--muted2);padding:20px">
             No orders yet.
           </td>
         </tr>`;
     } else {
-      tbody.innerHTML = orders.map(o => `
+            tbody.innerHTML = orders.map(o => `
         <tr>
           <td>
             <span class="order-id">
               ${o.transactionCode || o.id.slice(0, 8)}
             </span>
-          </td>
-          <td style="font-size:0.8rem;color:var(--muted2)">
-            ${o.service}
           </td>
           <td>
             <span class="weight-cell">
@@ -2117,7 +2300,9 @@ async function openCustomerProfileModal(userId) {
               ₱${(o.amount || 0).toFixed(2)}
             </span>
           </td>
-                    <td>${statusBadge(o.status)}</td>
+                    <td>${o.pendingSync
+          ? `<span class="status-badge status-pending">${icon('cloud-off', 12)} Pending Sync</span>`
+          : statusBadge(o.status)}</td>
           <td>
             ${o.status === 'ready' ? `
               <button
@@ -2155,7 +2340,7 @@ function closeCustomerProfileModal() {
 // Mark order as picked up from inside the profile modal
 async function cpMarkPickedUp(orderId) {
   try {
-    await updateOrderStatus(orderId, 'picked');
+    await markOrderPicked(orderId);
       showToast('check-circle-2', 'Order marked as Picked Up.');
 
     // Refresh the modal
@@ -2329,8 +2514,8 @@ async function markPickedUpFromModal(orderId, userId, firstName, lastName) {
     btn.textContent = 'Updating...';
   }
 
-  try {
-    await updateOrderStatus(orderId, 'picked');
+    try {
+    await markOrderPicked(orderId);
 
     // Show the item as done instead of removing it abruptly
     const item = document.getElementById(`pu-item-${orderId}`);
@@ -2740,6 +2925,7 @@ window.addEventListener('DOMContentLoaded', () => {
         await loadOrders();
         await loadSettingsIntoForm();
         await loadPendingCustomers();
+        await loadApprovedCustomers();
         renderWeightHistory();
         renderReadings();
 
@@ -2821,6 +3007,23 @@ window.addEventListener('DOMContentLoaded', () => {
             if (e.key.length === 1) {
                 scanInput.focus();
             }
+        });
+
+                // ── DEDICATED "JUMP TO SCANNER" KEY ──────────────────────
+        // Press Escape from literally anywhere to send focus straight
+        // to the topbar scan box — deliberate and on-demand only,
+        // never automatic, so it can never interrupt typing in
+        // Search, Settings, or any modal field. If a modal happens to
+        // be open, Escape closes it first (matching existing behavior
+        // elsewhere in the app) rather than fighting over the key.
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Escape') return;
+
+            const openModal = document.querySelector('.modal-overlay.open');
+            if (openModal) return; // let the modal's own Escape-to-close handling run instead
+
+            const scanInput = document.getElementById('scan-input');
+            if (scanInput) scanInput.focus();
         });
 
         // ── AUTO-CAPTURE SCANNER INPUT — Pending Validation Modal ────

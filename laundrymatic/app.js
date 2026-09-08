@@ -473,6 +473,7 @@ function showPage(page, el) {
 
 let systemOnline = true;
 let isSyncing = false;
+let currentShopId = null;
 
 // Cache of all orders — refreshed by loadOrders() and the realtime listener
 // Chart functions read from this instead of any hardcoded data
@@ -575,7 +576,7 @@ let weightMode = 'live';
 let scannedProfileCustomer = null;
 
 async function loadSettingsIntoForm() {
-    const settings = await getSettings();
+    const settings = await getSettings(currentShopId);
 
     MIN_CHARGE = settings.minCharge != null ? settings.minCharge : 75.00;
     const minInput = document.getElementById('min-charge-input');
@@ -793,6 +794,7 @@ async function submitOrder() {
         const finish = calculateFinishTime(w);
         const pendingOrder = {
             localId: 'local-' + now.getTime() + '-' + Math.random().toString(36).slice(2, 8),
+            shopId: currentShopId,
             userId: selectedCustomer.id,
             customerName: `${selectedCustomer.firstName} ${selectedCustomer.lastName}`,
             contact1: selectedCustomer.contact1 || '',
@@ -813,7 +815,7 @@ async function submitOrder() {
             createdAt: now.toISOString(),
         };
 
-        savePendingOrder(pendingOrder);
+        savePendingOrder(currentShopId, pendingOrder);
         showToast('cloud-off', `Order saved offline for ${selectedCustomer.firstName}. Receipt will print once synced.`);
         closeModal();
         loadOrders();
@@ -827,7 +829,7 @@ async function submitOrder() {
     }
 
     try {
-        const orderId = await createOrder(selectedCustomer.id, {
+        const orderId = await createOrder(currentShopId, selectedCustomer.id, {
             customerName: `${selectedCustomer.firstName} ${selectedCustomer.lastName}`,
             kg: w,
             amount: cost(w),
@@ -859,7 +861,7 @@ async function submitOrder() {
 
 async function syncPendingOrders() {
     if (isSyncing) return;
-    const pending = getPendingOrders();
+    const pending = getPendingOrders(currentShopId);
     if (pending.length === 0) return;
 
     isSyncing = true;
@@ -869,10 +871,10 @@ async function syncPendingOrders() {
     for (const order of pending) {
         try {
             const { localId, contact1, contact2, ...orderData } = order;
-            const orderId = await createOrder(order.userId, orderData);
+            const orderId = await createOrder(order.shopId, order.userId, orderData);
             const savedOrder = await db.ref(`orders/${orderId}`).once('value');
 
-            removePendingOrder(localId);
+            removePendingOrder(currentShopId, localId);
             succeeded++;
 
             // Prints only once the order is real — this is what keeps
@@ -1039,7 +1041,7 @@ async function saveSettings() {
     const newTieredMaxPrice    = (!isNaN(parsedTieredMaxPrice)    && parsedTieredMaxPrice    >= newTieredBasePrice) ? parsedTieredMaxPrice : 375;
 
     try {
-        await saveSettingsToFirebase({
+        await saveSettingsToFirebase(currentShopId, {
             minCharge: newMinCharge,
             ratePerKg: newRate,
             pricingMode: PRICING_MODE,
@@ -1129,7 +1131,7 @@ async function handleQRScan(value) {
             // Offline — only a cached, previously-approved customer
             // can be found. Job Order QR scans (status updates,
             // pickup) aren't supported offline in this version.
-            customer = getCachedCustomer(qrValue);
+            customer = getCachedCustomer(currentShopId, qrValue);
         }
 
         if (order) {
@@ -1471,15 +1473,15 @@ function createOrderForCustomer(userId, customerName) {
 // ── LOAD ORDERS FROM FIREBASE ────────────────────────────────
 
 async function loadOrders() {
-    const orders = await getAllOrders();
+    const orders = await getAllOrders(currentShopId);
     allOrdersCache = orders;   // cache for the chart to read from — real orders only
 
     // Locally-queued offline orders — shown in the table and counted
     // in KPIs right away, but kept out of allOrdersCache/Records/Top
     // Customers, which assume a real Firebase order id
-    const pendingOrders = getPendingOrders();
+    const pending = getPendingOrders(currentShopId);
 
-    const mapped = [...pendingOrders, ...orders].map(o => ({
+    const mapped = [...pending, ...orders].map(o => ({
         id:          o.transactionCode,
         customer:    o.customerName,
         weight:      o.kg,
@@ -1493,7 +1495,7 @@ async function loadOrders() {
     renderOrders('orders-body',      mapped.slice(0, 10));
     renderOrders('orders-body-full', mapped);
 
-    updateDashboardKPIs([...pendingOrders, ...orders]);
+    updateDashboardKPIs([...pending, ...orders]);
     updateStatusOverview(orders);
     updateUnclaimedLaundry(orders);
     renderTopCustomers(orders);
@@ -1522,10 +1524,10 @@ async function searchCustomers(query) {
     // Get all customers — Firebase when online, offline cache otherwise
   let customers;
   if (systemOnline) {
-      customers = await getAllCustomers();
-      updateCustomerCache(customers);
+      customers = await getAllCustomers(currentShopId);
+      updateCustomerCache(currentShopId, customers);
   } else {
-      customers = getCachedCustomers();
+      customers = getCachedCustomers(currentShopId);
   }
 
   // Filter by name or contact number — case insensitive
@@ -1567,7 +1569,7 @@ async function selectCustomer(customerId) {
   // copy when offline, matching handleQRScan()'s same pattern
   const customer = systemOnline
       ? await getCustomer(customerId)
-      : getCachedCustomer(customerId);
+      : getCachedCustomer(currentShopId, customerId);
   if (!customer) return;
 
   // Store selected customer globally so submitOrder() can use it
@@ -1656,7 +1658,7 @@ function switchCustomerTab(tab, el) {
 // ── LOAD PENDING CUSTOMERS ───────────────────────────────────
 
 async function loadPendingCustomers() {
-  const customers = await getPendingCustomers();
+  const customers = await getPendingCustomers(currentShopId);
   const el = document.getElementById('pending-customers-body');
   const badge = document.getElementById('pending-badge');
 
@@ -1676,15 +1678,15 @@ async function loadPendingCustomers() {
     return;
   }
 
-  el.innerHTML = customers.map(c => `
+    el.innerHTML = customers.map(c => `
     <tr>
       <td>
         <div class="customer-cell">
           <div class="mini-avatar"
                style="background:${avatarColor(c.firstName)}">
-            ${c.firstName[0]}${c.lastName[0]}
+            ${c.firstName?.[0] || '?'}${c.lastName?.[0] || ''}
           </div>
-          ${c.firstName} ${c.lastName}
+          ${c.firstName || 'Unknown'} ${c.lastName || ''}
         </div>
       </td>
       <td style="font-family:var(--font-mono);font-size:0.8rem">
@@ -1721,8 +1723,8 @@ async function loadPendingCustomers() {
 // ── LOAD APPROVED CUSTOMERS ──────────────────────────────────
 
 async function loadApprovedCustomers() {
-  const customers = await getApprovedCustomers();
-  updateCustomerCache(customers);
+  const customers = await getApprovedCustomers(currentShopId);
+  updateCustomerCache(currentShopId, customers);
   const el = document.getElementById('customers-body');
   if (!el) return;
 
@@ -1739,17 +1741,17 @@ async function loadApprovedCustomers() {
     return;
   }
 
-  el.innerHTML = customers.map(c => `
+    el.innerHTML = customers.map(c => `
     <tr style="cursor:pointer"
         onclick="openCustomerProfileModal('${c.id}')">
       <td>
         <div class="customer-cell">
           <div class="mini-avatar"
                style="background:${avatarColor(c.firstName)}">
-            ${c.firstName[0]}${c.lastName[0]}
+            ${c.firstName?.[0] || '?'}${c.lastName?.[0] || ''}
           </div>
           <span style="color:var(--accent2);font-weight:600">
-            ${c.firstName} ${c.lastName}
+            ${c.firstName || 'Unknown'} ${c.lastName || ''}
           </span>
         </div>
       </td>
@@ -1938,7 +1940,7 @@ async function registerCustomer() {
     }
 
     try {
-        const existing = await findCustomerByContact(contact1);
+        const existing = await findCustomerByContact(currentShopId, contact1);
         if (existing) {
             showFieldError('contact1',
                 `Already registered to ${existing.firstName} ${existing.lastName}.`);
@@ -1946,7 +1948,7 @@ async function registerCustomer() {
             return;
         }
 
-        const userId = await saveCustomer({
+        const userId = await saveCustomer(currentShopId, {
             firstName, lastName, contact1, contact2,
             address, fbAccount: fb,
             status: 'approved',
@@ -2691,7 +2693,7 @@ function setReportPeriod(period, el) {
 async function loadReport() {
     const {start, end} = getDateRangeForPeriod(currentReportPeriod);
 
-    const allOrders = await getAllOrders();
+    const allOrders = await getAllOrders(currentShopId);
 
     const filtered = allOrders.filter(o => {
         if (!o.createdAt) return false;
@@ -2912,20 +2914,30 @@ window.addEventListener('DOMContentLoaded', () => {
         // Fill sidebar name from the admin's profile stored in Firebase
         const snap = await db.ref('admins/' + firebaseUser.uid).once('value');
         const admin = snap.val();
-        if (admin && admin.firstName) {
-            const nameEl = document.getElementById('sidebar-name');
-            const avatarEl = document.getElementById('sidebar-avatar');
-            if (nameEl) nameEl.textContent = admin.firstName + ' ' + (admin.lastName || '');
-            if (avatarEl) avatarEl.textContent = admin.firstName[0] + (admin.lastName ? admin.lastName[0] : '');
-        }
+if (admin && admin.firstName) {
+    const nameEl = document.getElementById('sidebar-name');
+    const avatarEl = document.getElementById('sidebar-avatar');
+    const shopNameEl = document.getElementById('sidebar-shopname');
+    if (nameEl) nameEl.textContent = admin.firstName + ' ' + (admin.lastName || '');
+    if (avatarEl) avatarEl.textContent = admin.firstName[0] + (admin.lastName ? admin.lastName[0] : '');
+    if (shopNameEl && admin.shopName) shopNameEl.textContent = admin.shopName;
+}
+currentShopId = admin?.shopId || null;
+if (!currentShopId) {
+    console.error('This admin account has no shopId — was it created before the multi-shop update? Re-register a fresh account.');
+}
 
         renderIcons(); // activates any icon() placeholders already in the static HTML
 
-        // Load data from Firebase instead of hardcoded arrays
-        await loadOrders();
-        await loadSettingsIntoForm();
-        await loadPendingCustomers();
-        await loadApprovedCustomers();
+                // Load data from Firebase instead of hardcoded arrays.
+        // Each wrapped separately so one failing call can't silently
+        // stop every load after it (exactly what happened when a
+        // bad customer record crashed loadApprovedCustomers and
+        // took the Notifications listener setup down with it).
+        try { await loadOrders(); } catch (err) { console.error('loadOrders failed:', err); }
+        try { await loadSettingsIntoForm(); } catch (err) { console.error('loadSettingsIntoForm failed:', err); }
+        try { await loadPendingCustomers(); } catch (err) { console.error('loadPendingCustomers failed:', err); }
+        try { await loadApprovedCustomers(); } catch (err) { console.error('loadApprovedCustomers failed:', err); }
         renderWeightHistory();
         renderReadings();
 
@@ -2933,7 +2945,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         // Listen for realtime order updates
         // This updates your table automatically when any order changes
-        listenToOrders(orders => {
+        listenToOrders(currentShopId, orders => {
             allOrdersCache = orders;
 
             const mapped = orders.map(o => ({

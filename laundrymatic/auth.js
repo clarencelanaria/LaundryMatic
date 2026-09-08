@@ -17,6 +17,7 @@ async function checkAuthState() {
     const onAuthPage = onIndexPage || window.location.pathname.includes('register');
 
     auth.onAuthStateChanged(async user => {
+        if (isRegistering) return;
         if (!user) {
             hideTermsGate();
             if (!onAuthPage) window.location.href = 'index.html';
@@ -52,6 +53,12 @@ checkAuthState();
 // automatically, independently of the other document.
 const CURRENT_TERMS_VERSION = '1.0';
 const CURRENT_PRIVACY_VERSION = '1.0';
+
+// Blocks checkAuthState()'s global listener from reacting to the
+// sign-in event fired mid-registration — without this, it can race
+// ahead and navigate away before handleRegister() finishes writing
+// the shop and admin profile.
+let isRegistering = false;
 
 // Holds the uid of whoever is currently stuck at the gate, so the
 // Accept button (which has no arguments in its onclick) knows who to update
@@ -269,6 +276,7 @@ function handleLogout() {
 async function handleRegister() {
     const firstName = document.getElementById('reg-firstname').value.trim();
     const lastName = document.getElementById('reg-lastname').value.trim();
+    const shopName = document.getElementById('reg-shopname').value.trim();
     const email = document.getElementById('reg-username').value.trim();
     const password = document.getElementById('reg-password').value;
     const confirm = document.getElementById('reg-confirm').value;
@@ -277,14 +285,11 @@ async function handleRegister() {
 
     hideError('register-error');
 
-    if (!firstName || !lastName || !email || !password || !confirm) {
+    if (!firstName || !lastName || !shopName || !email || !password || !confirm) {
         showError('register-error', 'register-error-msg', 'Please fill in all fields.');
         return;
     }
 
-    // Both agreements are independent and both required before an
-    // account is created — accepting one is never treated as
-    // accepting the other
     if (!termsChecked) {
         showError('register-error', 'register-error-msg', 'You must agree to the Terms & Conditions before creating an account.');
         return;
@@ -304,22 +309,48 @@ async function handleRegister() {
         return;
     }
 
+    isRegistering = true;
+    let cred = null;
+
     try {
-        const cred = await auth.createUserWithEmailAndPassword(email, password);
+        cred = await auth.createUserWithEmailAndPassword(email, password);
+
+        let baseSlug = shopName.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        if (!baseSlug) baseSlug = 'shop';
+        let shopId = baseSlug;
+        let suffix = 1;
+        while ((await db.ref('shops/' + shopId).once('value')).exists()) {
+            shopId = `${baseSlug}-${suffix}`;
+            suffix++;
+        }
+
+        await db.ref('shops/' + shopId).set({
+            name: shopName,
+            createdAt: new Date().toISOString(),
+            createdBy: cred.user.uid,
+        });
+
         await db.ref('admins/' + cred.user.uid).set({
-            firstName, lastName, email,
-            // Terms & Conditions acceptance
+            firstName, lastName, shopName, shopId, email,
             termsAccepted: true,
             termsAcceptedAt: new Date().toISOString(),
             termsVersion: CURRENT_TERMS_VERSION,
-            // Privacy Notice acknowledgment — recorded separately,
-            // never inferred from Terms acceptance
             privacyAcknowledged: true,
             privacyAcknowledgedAt: new Date().toISOString(),
             privacyVersion: CURRENT_PRIVACY_VERSION,
         });
+
+        isRegistering = false;
         window.location.href = 'dashboard.html';
+
     } catch (err) {
+        // If the auth account was created but a later step failed,
+        // delete it so this email can be retried cleanly instead of
+        // leaving a broken, orphaned account behind
+        if (cred) {
+            await cred.user.delete().catch(() => {});
+        }
+        isRegistering = false;
         showError('register-error', 'register-error-msg', err.message);
     }
 }

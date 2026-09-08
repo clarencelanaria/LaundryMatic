@@ -45,11 +45,12 @@ function calculatePickupTime(kg, timeIn) {
 
 // ── CUSTOMER FUNCTIONS ───────────────────────────────────────
 
-async function saveCustomer(customerData) {
+async function saveCustomer(shopId, customerData) {
     const newRef = db.ref('users').push();
     const userId = newRef.key;
     await newRef.set({
         ...customerData,
+        shopId,
         profileQR: userId,
         createdAt: new Date().toISOString(),
     });
@@ -67,7 +68,7 @@ async function getCustomerByQR(qrValue) {
 
 // ── ORDER FUNCTIONS ──────────────────────────────────────────
 
-async function createOrder(userId, orderData) {
+async function createOrder(shopId, userId, orderData) {
     const newRef = db.ref('orders').push();
     const orderId = newRef.key;
 
@@ -89,10 +90,11 @@ async function createOrder(userId, orderData) {
         : calculateFinishTime(orderData.kg);
 
     // Save order data
-    await newRef.set({
+        await newRef.set({
         ...orderData,
         orderId,
         userId,
+        shopId,
         transactionCode: orderData.transactionCode || generateTransactionCode(),
         status: orderData.status || 'washing',
         dateIn,
@@ -104,7 +106,7 @@ async function createOrder(userId, orderData) {
         orderQR: orderId,
         createdAt: orderData.createdAt || now.toISOString(),
     });
-    
+
     // Save ONE weight snapshot per order — with auto-expiry tracking
     await db.ref('weightHistory').push({
         kg: orderData.kg,
@@ -126,13 +128,13 @@ async function createOrder(userId, orderData) {
     return orderId;
 }
 
-async function getAllOrders() {
-    const snapshot = await db.ref('orders').orderByChild('createdAt').once('value');
+async function getAllOrders(shopId) {
+    const snapshot = await db.ref('orders').orderByChild('shopId').equalTo(shopId).once('value');
     const data = snapshot.val();
     if (!data) return [];
     return Object.entries(data)
         .map(([id, order]) => ({ id, ...order }))
-        .reverse();
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
 async function getOrdersByUser(userId) {
@@ -168,8 +170,8 @@ async function updateOrderStatus(orderId, newStatus) {
 
 // Checks if a contact number already belongs to another registered
 // customer (pending or approved) — prevents split/duplicate profiles
-async function findCustomerByContact(contact) {
-    const snapshot = await db.ref('users').once('value');
+async function findCustomerByContact(shopId, contact) {
+    const snapshot = await db.ref('users').orderByChild('shopId').equalTo(shopId).once('value');
     const data = snapshot.val();
     if (!data) return null;
 
@@ -185,19 +187,19 @@ async function getOrderByQR(qrValue) {
     return snapshot.val();
 }
 
-async function getSettings() {
-    const snap = await db.ref('settings').once('value');
+async function getSettings(shopId) {
+    const snap = await db.ref('settings/' + shopId).once('value');
     return snap.val() || { minWeightKg: 3 };
 }
 
-async function saveSettingsToFirebase(settings) {
-    await db.ref('settings').update(settings);
+async function saveSettingsToFirebase(shopId, settings) {
+    await db.ref('settings/' + shopId).update(settings);
 }
 
 // ── REALTIME LISTENERS ───────────────────────────────────────
 
-function listenToOrders(callback) {
-    db.ref('orders').on('value', snapshot => {
+function listenToOrders(shopId, callback) {
+    db.ref('orders').orderByChild('shopId').equalTo(shopId).on('value', snapshot => {
         const data = snapshot.val();
         if (!data) { callback([]); return; }
         const orders = Object.entries(data)
@@ -257,25 +259,22 @@ async function markNotificationUnread(userId, notifId) {
 // ── CUSTOMER VALIDATION ──────────────────────────────────────
 
 // Gets all customers with status = 'pending' (not yet validated)
-async function getPendingCustomers() {
-    const snapshot = await db.ref('users')
-        .orderByChild('status')
-        .equalTo('pending')
-        .once('value');
+async function getPendingCustomers(shopId) {
+    const snapshot = await db.ref('users').orderByChild('shopId').equalTo(shopId).once('value');
     const data = snapshot.val();
     if (!data) return [];
-    return Object.entries(data).map(([id, u]) => ({ id, ...u }));
+    return Object.entries(data)
+        .map(([id, u]) => ({ id, ...u }))
+        .filter(u => u.status === 'pending');
 }
 
-// Gets all approved customers
-async function getApprovedCustomers() {
-    const snapshot = await db.ref('users')
-        .orderByChild('status')
-        .equalTo('approved')
-        .once('value');
+async function getApprovedCustomers(shopId) {
+    const snapshot = await db.ref('users').orderByChild('shopId').equalTo(shopId).once('value');
     const data = snapshot.val();
     if (!data) return [];
-    return Object.entries(data).map(([id, u]) => ({ id, ...u }));
+    return Object.entries(data)
+        .map(([id, u]) => ({ id, ...u }))
+        .filter(u => u.status === 'approved');
 }
 
 // Approves a customer — makes their QR printable
@@ -284,8 +283,8 @@ async function approveCustomer(userId) {
 }
 
 // Gets all customers regardless of status
-async function getAllCustomers() {
-    const snapshot = await db.ref('users').once('value');
+async function getAllCustomers(shopId) {
+    const snapshot = await db.ref('users').orderByChild('shopId').equalTo(shopId).once('value');
     const data = snapshot.val();
     if (!data) return [];
     return Object.entries(data).map(([id, u]) => ({ id, ...u }));
@@ -340,44 +339,40 @@ function listenToConnectionState(callback) {
 // ── OFFLINE PENDING ORDERS QUEUE ─────────────────────────────
 // localStorage survives a reload/restart — RTDB's own offline
 // cache is memory-only and would be lost in a real brownout.
-const PENDING_ORDERS_KEY = 'lm_pending_orders';
-
-function getPendingOrders() {
-    const data = localStorage.getItem(PENDING_ORDERS_KEY);
+function getPendingOrders(shopId) {
+    const data = localStorage.getItem('lm_pending_orders_' + shopId);
     return data ? JSON.parse(data) : [];
 }
 
-function savePendingOrder(order) {
-    const pending = getPendingOrders();
+function savePendingOrder(shopId, order) {
+    const pending = getPendingOrders(shopId);
     pending.push(order);
-    localStorage.setItem(PENDING_ORDERS_KEY, JSON.stringify(pending));
+    localStorage.setItem('lm_pending_orders_' + shopId, JSON.stringify(pending));
 }
 
-function removePendingOrder(localId) {
-    const pending = getPendingOrders().filter(o => o.localId !== localId);
-    localStorage.setItem(PENDING_ORDERS_KEY, JSON.stringify(pending));
+function removePendingOrder(shopId, localId) {
+    const pending = getPendingOrders(shopId).filter(o => o.localId !== localId);
+    localStorage.setItem('lm_pending_orders_' + shopId, JSON.stringify(pending));
 }
 
 // ── OFFLINE CUSTOMER CACHE ────────────────────────────────────
 // Refreshed opportunistically whenever a customer list is
 // successfully fetched while online — read from when offline so
 // scanning/searching a KNOWN customer still works mid-outage.
-const CUSTOMER_CACHE_KEY = 'lm_customer_cache';
-
-function updateCustomerCache(customers) {
+function updateCustomerCache(shopId, customers) {
     const map = {};
     customers.forEach(c => { map[c.id] = c; });
-    localStorage.setItem(CUSTOMER_CACHE_KEY, JSON.stringify(map));
+    localStorage.setItem('lm_customer_cache_' + shopId, JSON.stringify(map));
 }
 
-function getCachedCustomer(userId) {
-    const data = localStorage.getItem(CUSTOMER_CACHE_KEY);
+function getCachedCustomer(shopId, userId) {
+    const data = localStorage.getItem('lm_customer_cache_' + shopId);
     const map = data ? JSON.parse(data) : {};
     return map[userId] || null;
 }
 
-function getCachedCustomers() {
-    const data = localStorage.getItem(CUSTOMER_CACHE_KEY);
+function getCachedCustomers(shopId) {
+    const data = localStorage.getItem('lm_customer_cache_' + shopId);
     const map = data ? JSON.parse(data) : {};
     return Object.values(map);
 }

@@ -161,6 +161,7 @@
                     <span class="unclaimed-ribbon-text">Unclaimed Laundry</span>
                 </div>
                 <div class="unclaimed-ribbon-right">
+                    <span id="unclaimed-due" style="font-size:0.78rem;font-family:var(--font-mono);margin-right:10px">All paid</span>
                     <span class="unclaimed-ribbon-count" id="unclaimed-count">0</span>
                     <span class="unclaimed-ribbon-arrow" id="unclaimed-arrow">▾</span>
                 </div>
@@ -351,9 +352,9 @@
                     <div class="kpi-sub">Paid &amp; already picked up</div>
                 </div>
                 <div class="kpi red">
-                    <div class="kpi-label">Total Collectibles</div>
-                    <div class="kpi-value" id="report-total-collectibles">0</div>
-                    <div class="kpi-sub">Customers who picked up</div>
+                    <div class="kpi-label">Total Amount Collectibles</div>
+                    <div class="kpi-value" id="report-total-collectibles">₱0.00</div>
+                    <div class="kpi-sub">Unpaid — Pay Later &amp; uncollected</div>
                 </div>
                 <div class="kpi green">
                     <div class="kpi-label">Grand Total</div>
@@ -442,9 +443,9 @@
                     <div class="field-hint">Amount charged for every kilogram of laundry.</div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Minimum Price per Transaction (₱)</label>
-                    <input class="form-input" type="number" step="0.01" id="min-charge-input" value="75.00">
-                    <div class="field-hint">Lowest amount ever charged, even for very light loads.</div>
+                    <label class="form-label">Minimum Kilo per Transaction (kg)</label>
+                    <input class="form-input" type="number" step="0.1" id="min-kg-input" value="3">
+                    <div class="field-hint">Loads lighter than this are billed as this weight. Example: 3 kg at ₱25/kg with a 5 kg minimum is charged as 5 × ₱25 = ₱125.</div>
                 </div>
             </div>
         </div>
@@ -531,9 +532,17 @@
                         <input type="text" placeholder="Search customers..."
                             oninput="filterCustomerTable(this.value)">
                     </div>
-                    <button class="btn btn-ghost" style="font-size:0.8rem" onclick="loadApprovedCustomers()">
-                        ↻ Refresh
-                    </button>
+                    <div style="display:flex;gap:10px;align-items:center">
+                        <select class="form-input" id="customer-sort" onchange="setCustomerSort(this.value)"
+                                style="width:auto;padding:6px 12px;font-size:0.8rem">
+                            <option value="default">Sort: Default</option>
+                            <option value="alphabetical">Sort: A–Z</option>
+                            <option value="recent">Sort: Last Added</option>
+                        </select>
+                        <button class="btn btn-ghost" style="font-size:0.8rem" onclick="loadApprovedCustomers()">
+                            ↻ Refresh
+                        </button>
+                    </div>
                 </div>
                 <table id="customers-table">
                     <thead>

@@ -104,14 +104,16 @@ function formatRelativeTime(isoString) {
 // minimum charge is ₱75
 // Simplified after scoping the system to Wash & Dry only —
 // no more service-type multiplier needed
-let MIN_CHARGE = 75.00; // overwritten by Firebase settings on load
+let MIN_KG = 3; // overwritten by Firebase settings on load
 
 function cost(w) {
     if (PRICING_MODE === 'tiered') {
         return calculateTieredCost(w);
     }
-    const r = w * RATE;
-    return Math.max(r, MIN_CHARGE);
+    // Anything below the minimum kilo is billed AS the minimum kilo —
+    // e.g. 3kg at ₱25/kg with a 5kg minimum bills as 5 × 25 = ₱125
+    const billableWeight = Math.max(w, MIN_KG);
+    return billableWeight * RATE;
 }
 
 // New tiered pricing — fully driven by Settings, nothing hardcoded here.
@@ -578,9 +580,9 @@ let scannedProfileCustomer = null;
 async function loadSettingsIntoForm() {
     const settings = await getSettings(currentShopId);
 
-    MIN_CHARGE = settings.minCharge != null ? settings.minCharge : 75.00;
-    const minInput = document.getElementById('min-charge-input');
-    if (minInput) minInput.value = MIN_CHARGE.toFixed(2);
+    MIN_KG = settings.minKg != null ? settings.minKg : 3;
+    const minInput = document.getElementById('min-kg-input');
+    if (minInput) minInput.value = MIN_KG;
 
     RATE = settings.ratePerKg != null ? settings.ratePerKg : 65;
     const rateInput = document.getElementById('rate-input');
@@ -1018,14 +1020,14 @@ async function viewOrderDetails(orderId) {
 
 // Simulates saving settings
 async function saveSettings() {
-    const minInput  = document.getElementById('min-charge-input');
+    const minInput  = document.getElementById('min-kg-input');
     const rateInput = document.getElementById('rate-input');
 
     const parsedMin  = parseFloat(minInput.value);
     const parsedRate = parseFloat(rateInput.value);
 
-    const newMinCharge = (!isNaN(parsedMin)  && parsedMin  >= 0) ? parsedMin  : 75.00;
-    const newRate       = (!isNaN(parsedRate) && parsedRate > 0) ? parsedRate : 65;
+    const newMinKg = (!isNaN(parsedMin)  && parsedMin  >= 0) ? parsedMin  : 3;
+    const newRate  = (!isNaN(parsedRate) && parsedRate > 0) ? parsedRate : 65;
 
     // ── TIERED PRICING (new, additive) ────────────────────────
     const parsedTieredBasePrice   = parseFloat(document.getElementById('tiered-base-price-input').value);
@@ -1042,7 +1044,7 @@ async function saveSettings() {
 
     try {
         await saveSettingsToFirebase(currentShopId, {
-            minCharge: newMinCharge,
+            minKg: newMinKg,
             ratePerKg: newRate,
             pricingMode: PRICING_MODE,
             tieredBasePrice: newTieredBasePrice,
@@ -1052,7 +1054,7 @@ async function saveSettings() {
             tieredMaxPrice: newTieredMaxPrice,
         });
 
-        MIN_CHARGE = newMinCharge;
+        MIN_KG = newMinKg;
         RATE = newRate;
         TIERED_BASE_PRICE = newTieredBasePrice;
         TIERED_START_KG = newTieredStartKg;
@@ -1293,6 +1295,19 @@ function openOrderScanModal(orderId, order) {
         pendingAutoAdvanceTimer = setTimeout(() => {
             pendingAutoAdvanceTimer = null;
             scanMarkStatus(orderId, nextStatus);
+        }, AUTO_ADVANCE_DELAY_MS);
+
+    } else if (status === 'ready') {
+        // Scanning a Job Order QR that's already ready completes the
+        // pickup automatically — the same zero-click outcome as
+        // scanning the customer's Profile QR, just via the receipt's
+        // QR instead. The Cancel button still cancels it in time, and
+        // the existing manual button remains for anyone who prefers it.
+        if (pendingAutoAdvanceTimer) clearTimeout(pendingAutoAdvanceTimer);
+
+        pendingAutoAdvanceTimer = setTimeout(() => {
+            pendingAutoAdvanceTimer = null;
+            scanMarkStatus(orderId, 'picked');
         }, AUTO_ADVANCE_DELAY_MS);
     }
     renderIcons();
@@ -1729,6 +1744,19 @@ async function loadPendingCustomers() {
 async function loadApprovedCustomers() {
   const customers = await getApprovedCustomers();
   updateCustomerCache(customers);
+
+  // Sort applied after caching so the offline cache always holds the
+  // full, unmodified list regardless of what the admin is sorting by
+  if (customerSortMode === 'alphabetical') {
+      customers.sort((a, b) =>
+          `${a.firstName || ''} ${a.lastName || ''}`.trim().toLowerCase()
+              .localeCompare(`${b.firstName || ''} ${b.lastName || ''}`.trim().toLowerCase())
+      );
+  } else if (customerSortMode === 'recent') {
+      customers.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  }
+  // 'default' leaves Firebase's own ordering untouched
+
   const el = document.getElementById('customers-body');
   if (!el) return;
 
@@ -2238,6 +2266,14 @@ async function autoCompletePickup(userId, customer, readyOrders) {
 // Holds the customer currently shown in the profile modal
 let viewedCustomer = null;
 
+// Approved Customers list sort order — 'default' | 'alphabetical' | 'recent'
+let customerSortMode = 'default';
+
+function setCustomerSort(mode) {
+    customerSortMode = mode;
+    loadApprovedCustomers();
+}
+
 async function openCustomerProfileModal(userId) {
   try {
     const customer = await getCustomer(userId);
@@ -2593,6 +2629,12 @@ function toggleUnclaimedList() {
 // Fills the ribbon count and the expandable list — "unclaimed" means
 // status is 'ready' but not yet 'picked' up. Groups multiple ready
 // orders under the same customer into a single row.
+// Unclaimed = 'ready' but not yet picked up. Each row also shows
+// whether that customer still owes money: a Pay Now order is already
+// paid, a Pay Later order isn't until pickup (markOrderPicked sets
+// paid: true). This makes the ribbon double as the admin's
+// "who still owes" list, using the same `paid` flag the Total Amount
+// Collectibles report KPI reads — so the two always agree.
 function updateUnclaimedLaundry(orders) {
     const readyOrders = orders.filter(o => o.status === 'ready');
 
@@ -2603,12 +2645,24 @@ function updateUnclaimedLaundry(orders) {
     readyOrders.forEach(o => {
         const key = o.userId || o.customerName;
         if (!grouped[key]) {
-            grouped[key] = { name: o.customerName || 'Unknown', count: 0 };
+            grouped[key] = { name: o.customerName || 'Unknown', count: 0, due: 0 };
         }
         grouped[key].count += 1;
+        if (!o.paid) grouped[key].due += (o.amount || 0);
     });
 
     const customers = Object.values(grouped);
+
+    // Running total of money waiting to be collected, shown on the ribbon
+    const totalDue = customers.reduce((sum, c) => sum + c.due, 0);
+    const dueEl = document.getElementById('unclaimed-due');
+    if (dueEl) {
+        dueEl.textContent = totalDue > 0
+            ? '₱' + totalDue.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' unpaid'
+            : 'All paid';
+        dueEl.style.color = totalDue > 0 ? 'var(--danger)' : 'var(--accent)';
+    }
+
     const listEl = document.getElementById('unclaimed-list');
     if (!listEl) return;
 
@@ -2620,7 +2674,12 @@ function updateUnclaimedLaundry(orders) {
     listEl.innerHTML = customers.map(c => `
       <div class="unclaimed-item">
         <span class="unclaimed-item-name">${c.name}</span>
-        <span class="unclaimed-item-count">${c.count} order${c.count > 1 ? 's' : ''}</span>
+        <span style="display:flex;align-items:center;gap:10px">
+          ${c.due > 0
+            ? `<span class="status-badge status-pending">${icon('circle-alert', 12)} ₱${c.due.toFixed(2)} due</span>`
+            : `<span class="status-badge status-ready">${icon('check-circle-2', 12)} Paid</span>`}
+          <span class="unclaimed-item-count">${c.count} order${c.count > 1 ? 's' : ''}</span>
+        </span>
       </div>
     `).join('');
     renderIcons();
@@ -2746,9 +2805,12 @@ function renderReportSummary(orders, period, start, end) {
         .filter(o => o.status === 'picked' && o.paid)
         .reduce((sum, o) => sum + (o.amount || 0), 0);
 
-    // Total Collectibles — count of individual picked-up ORDERS in
-    // this period (not unique customers, not a peso amount)
-    const totalCollectibles = orders.filter(o => o.status === 'picked').length;
+    // Total Amount Collectibles — money still owed. Covers Pay Later
+    // orders and anything not yet collected/paid. Cancelled orders
+    // are excluded since nothing is owed on them.
+    const totalCollectibles = orders
+        .filter(o => !o.paid && o.status !== 'cancelled')
+        .reduce((sum, o) => sum + (o.amount || 0), 0);
 
     // Grand Total — every job order in the period, any status EXCEPT cancelled
     const grandTotal = orders
@@ -2762,7 +2824,7 @@ function renderReportSummary(orders, period, start, end) {
     document.getElementById('report-total-orders').textContent       = totalOrders;
     document.getElementById('report-total-weight').textContent       = totalWeight.toFixed(1);
     document.getElementById('report-total-revenue').textContent      = '₱' + fmt(totalSales);
-    document.getElementById('report-total-collectibles').textContent = totalCollectibles;
+    document.getElementById('report-total-collectibles').textContent = '₱' + fmt(totalCollectibles);
     document.getElementById('report-grand-total').textContent        = '₱' + fmt(grandTotal);
 
     const avgLabelEl = document.getElementById('report-avg-orders-label');
@@ -2886,7 +2948,7 @@ function renderReportChart(orders, period, start, end) {
       <tr><td style="font-weight:600">Total Job Orders</td><td>${totalOrders}</td></tr>
       <tr><td style="font-weight:600">Total Weight</td><td>${totalWeight} kg</td></tr>
             <tr><td style="font-weight:600">Total Sales</td><td>${totalRevenue}</td></tr>
-      <tr><td style="font-weight:600">Total Collectibles</td><td>${totalCollectibles}</td></tr>
+      <tr><td style="font-weight:600">Total Amount Collectibles</td><td>${totalCollectibles}</td></tr>
       <tr><td style="font-weight:600">Grand Total</td><td>${grandTotal}</td></tr>
       <tr><td style="font-weight:600">${avgOrdersLabel}</td><td>${avgOrders}</td></tr>
       <tr><td style="font-weight:600">Average Sales per Order</td><td>${avgOrder}</td></tr>
@@ -3041,6 +3103,45 @@ if (!currentShopId) {
             const scanInput = document.getElementById('scan-input');
             if (scanInput) scanInput.focus();
         });
+
+                // ── ALWAYS-READY SCANNER ─────────────────────────────────
+        // The scan box should be live the moment the dashboard opens,
+        // and should quietly reclaim focus whenever the admin isn't
+        // actively doing something else — so the scanner just works
+        // without anyone clicking or pressing a key first.
+        //
+        // Deliberately NOT event-driven: it only acts when focus is
+        // resting on nothing at all (document.body). If the admin is
+        // typing anywhere, or any modal is open, this does nothing,
+        // so it can never steal focus mid-typing the way a blur-based
+        // approach would.
+        function reclaimScannerFocus() {
+            const scanInput = document.getElementById('scan-input');
+            if (!scanInput) return;
+
+            // Any modal open? Leave focus completely alone.
+            if (document.querySelector('.modal-overlay.open')) return;
+
+            const active = document.activeElement;
+
+            // Already where we want it
+            if (active === scanInput) return;
+
+            // Only reclaim when focus is on nothing meaningful.
+            // If it's on ANY form field or button, the admin is
+            // mid-task — back off entirely.
+            if (active && active !== document.body) return;
+
+            scanInput.focus();
+        }
+
+        // Focus it immediately on dashboard load — scanner is live
+        // the instant the admin logs in, no click needed
+        reclaimScannerFocus();
+
+        // Then keep it ready: checks twice a second, but only acts
+        // when nothing else has focus (see the guards above)
+        setInterval(reclaimScannerFocus, 500);
 
         // ── AUTO-CAPTURE SCANNER INPUT — Pending Validation Modal ────
 // Removes the requirement to manually click into the scan field.

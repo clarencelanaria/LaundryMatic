@@ -2081,34 +2081,34 @@ select.form-input option {
     background: #fff;
   }
 
-  /* 58mm paper = 54mm / 80mm paper = 76mm */
+  /* 58mm thermal paper — 56mm printable width, leaving ~1mm
+     margin on each side so nothing runs off the physical roll */
   #print-receipt-area #receipt-card {
     background: #fff !important;
     border: none !important;
     color: #000 !important;
     font-family: monospace;
     font-size: 11px;
-    width: 54mm;
-    /* change to 76mm for 80mm paper */
+    width: 56mm;
     margin: 0 auto;
     padding: 4px;
   }
 
   /* Override QR box size for narrow paper */
   #print-receipt-area .receipt-qr-box {
-    width: 130px !important;
-    height: 130px !important;
+    width: 110px !important;
+    height: 110px !important;
   }
 
   #print-receipt-area .receipt-qr-box img,
   #print-receipt-area .receipt-qr-box canvas {
-    width: 120px !important;
-    height: 120px !important;
+    width: 100px !important;
+    height: 100px !important;
   }
 
   /* Override total value size for narrow paper */
   #print-receipt-area .receipt-total-value {
-    font-size: 1.4rem !important;
+    font-size: 1.15rem !important;
   }
 
   /* Tighten spacing for narrow paper */
@@ -2116,8 +2116,16 @@ select.form-input option {
     margin-bottom: 2px;
   }
 
+  /* Wrap instead of clip — if a label + value can't fit on one
+     line (e.g. two contact numbers, or a long total), the value
+     drops to its own line instead of running off the paper edge */
   #print-receipt-area .receipt-row {
     margin-bottom: 3px;
+    flex-wrap: wrap;
+  }
+
+  #print-receipt-area .receipt-total-section {
+    flex-wrap: wrap;
   }
 
   #print-receipt-area .receipt-divider {

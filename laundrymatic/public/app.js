@@ -1120,18 +1120,22 @@ async function handleQRScan(value) {
         let order = null;
         let customer = null;
 
-        if (systemOnline) {
-            const [orderSnap, liveCustomer] = await Promise.all([
-                db.ref(`orders/${qrValue}`).once('value'),
-                getCustomer(qrValue),
-            ]);
-            order = orderSnap.val();
-            customer = liveCustomer;
+                if (systemOnline) {
+            // First determine whether the QR belongs to a customer.
+            // This prevents customer QR scans from unnecessarily
+            // reading /orders/{customerId}.
+            customer = await getCustomer(qrValue);
+
+            // If it isn't a customer QR, then check whether it is
+            // a Job Order QR.
+            if (!customer) {
+                const orderSnap = await db.ref(`orders/${qrValue}`).once('value');
+                order = orderSnap.val();
+            }
         } else {
             // Offline — only a cached, previously-approved customer
-            // can be found. Job Order QR scans (status updates,
-            // pickup) aren't supported offline in this version.
-            customer = getCachedCustomer(currentShopId, qrValue);
+            // can be found. Job Order QR scans aren't supported offline.
+            customer = getCachedCustomer(qrValue);
         }
 
         if (order) {
@@ -1524,10 +1528,10 @@ async function searchCustomers(query) {
     // Get all customers — Firebase when online, offline cache otherwise
   let customers;
   if (systemOnline) {
-      customers = await getAllCustomers(currentShopId);
-      updateCustomerCache(currentShopId, customers);
+      customers = await getAllCustomers();
+      updateCustomerCache(customers);
   } else {
-      customers = getCachedCustomers(currentShopId);
+      customers = getCachedCustomers();
   }
 
   // Filter by name or contact number — case insensitive
@@ -1569,7 +1573,7 @@ async function selectCustomer(customerId) {
   // copy when offline, matching handleQRScan()'s same pattern
   const customer = systemOnline
       ? await getCustomer(customerId)
-      : getCachedCustomer(currentShopId, customerId);
+      : getCachedCustomer(customerId);
   if (!customer) return;
 
   // Store selected customer globally so submitOrder() can use it
@@ -1658,7 +1662,7 @@ function switchCustomerTab(tab, el) {
 // ── LOAD PENDING CUSTOMERS ───────────────────────────────────
 
 async function loadPendingCustomers() {
-  const customers = await getPendingCustomers(currentShopId);
+  const customers = await getPendingCustomers();
   const el = document.getElementById('pending-customers-body');
   const badge = document.getElementById('pending-badge');
 
@@ -1723,8 +1727,8 @@ async function loadPendingCustomers() {
 // ── LOAD APPROVED CUSTOMERS ──────────────────────────────────
 
 async function loadApprovedCustomers() {
-  const customers = await getApprovedCustomers(currentShopId);
-  updateCustomerCache(currentShopId, customers);
+  const customers = await getApprovedCustomers();
+  updateCustomerCache(customers);
   const el = document.getElementById('customers-body');
   if (!el) return;
 
@@ -1940,7 +1944,7 @@ async function registerCustomer() {
     }
 
     try {
-        const existing = await findCustomerByContact(currentShopId, contact1);
+        const existing = await findCustomerByContact(contact1);
         if (existing) {
             showFieldError('contact1',
                 `Already registered to ${existing.firstName} ${existing.lastName}.`);
@@ -1948,7 +1952,7 @@ async function registerCustomer() {
             return;
         }
 
-        const userId = await saveCustomer(currentShopId, {
+        const userId = await saveCustomer({
             firstName, lastName, contact1, contact2,
             address, fbAccount: fb,
             status: 'approved',

@@ -45,12 +45,11 @@ function calculatePickupTime(kg, timeIn) {
 
 // ── CUSTOMER FUNCTIONS ───────────────────────────────────────
 
-async function saveCustomer(shopId, customerData) {
+async function saveCustomer(customerData) {
     const newRef = db.ref('users').push();
     const userId = newRef.key;
     await newRef.set({
         ...customerData,
-        shopId,
         profileQR: userId,
         createdAt: new Date().toISOString(),
     });
@@ -170,8 +169,8 @@ async function updateOrderStatus(orderId, newStatus) {
 
 // Checks if a contact number already belongs to another registered
 // customer (pending or approved) — prevents split/duplicate profiles
-async function findCustomerByContact(shopId, contact) {
-    const snapshot = await db.ref('users').orderByChild('shopId').equalTo(shopId).once('value');
+async function findCustomerByContact(contact) {
+    const snapshot = await db.ref('users').once('value');
     const data = snapshot.val();
     if (!data) return null;
 
@@ -259,22 +258,22 @@ async function markNotificationUnread(userId, notifId) {
 // ── CUSTOMER VALIDATION ──────────────────────────────────────
 
 // Gets all customers with status = 'pending' (not yet validated)
-async function getPendingCustomers(shopId) {
-    const snapshot = await db.ref('users').orderByChild('shopId').equalTo(shopId).once('value');
+// Customers are shared across every shop — validated once, they can
+// order at any shop in the system, matching how the mobile app
+// already works (a customer account never belongs to one shop).
+// Only orders themselves stay shop-scoped.
+async function getPendingCustomers() {
+    const snapshot = await db.ref('users').orderByChild('status').equalTo('pending').once('value');
     const data = snapshot.val();
     if (!data) return [];
-    return Object.entries(data)
-        .map(([id, u]) => ({ id, ...u }))
-        .filter(u => u.status === 'pending');
+    return Object.entries(data).map(([id, u]) => ({ id, ...u }));
 }
 
-async function getApprovedCustomers(shopId) {
-    const snapshot = await db.ref('users').orderByChild('shopId').equalTo(shopId).once('value');
+async function getApprovedCustomers() {
+    const snapshot = await db.ref('users').orderByChild('status').equalTo('approved').once('value');
     const data = snapshot.val();
     if (!data) return [];
-    return Object.entries(data)
-        .map(([id, u]) => ({ id, ...u }))
-        .filter(u => u.status === 'approved');
+    return Object.entries(data).map(([id, u]) => ({ id, ...u }));
 }
 
 // Approves a customer — makes their QR printable
@@ -283,8 +282,8 @@ async function approveCustomer(userId) {
 }
 
 // Gets all customers regardless of status
-async function getAllCustomers(shopId) {
-    const snapshot = await db.ref('users').orderByChild('shopId').equalTo(shopId).once('value');
+async function getAllCustomers() {
+    const snapshot = await db.ref('users').once('value');
     const data = snapshot.val();
     if (!data) return [];
     return Object.entries(data).map(([id, u]) => ({ id, ...u }));
@@ -359,20 +358,20 @@ function removePendingOrder(shopId, localId) {
 // Refreshed opportunistically whenever a customer list is
 // successfully fetched while online — read from when offline so
 // scanning/searching a KNOWN customer still works mid-outage.
-function updateCustomerCache(shopId, customers) {
+function updateCustomerCache(customers) {
     const map = {};
     customers.forEach(c => { map[c.id] = c; });
-    localStorage.setItem('lm_customer_cache_' + shopId, JSON.stringify(map));
+    localStorage.setItem('lm_customer_cache', JSON.stringify(map));
 }
 
-function getCachedCustomer(shopId, userId) {
-    const data = localStorage.getItem('lm_customer_cache_' + shopId);
+function getCachedCustomer(userId) {
+    const data = localStorage.getItem('lm_customer_cache');
     const map = data ? JSON.parse(data) : {};
     return map[userId] || null;
 }
 
-function getCachedCustomers(shopId) {
-    const data = localStorage.getItem('lm_customer_cache_' + shopId);
+function getCachedCustomers() {
+    const data = localStorage.getItem('lm_customer_cache');
     const map = data ? JSON.parse(data) : {};
     return Object.values(map);
 }

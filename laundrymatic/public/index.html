@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LaundryMatic — Register</title>
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+    <title>LaundryMatic — Login</title>
     <link rel="stylesheet" href="style.css">
     <link
         href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap"
@@ -15,7 +16,7 @@
 
     <div class="auth-wrapper">
 
-        <!-- Left branding panel (same as login) -->
+        <!-- Left panel: branding-->
         <div class="auth-brand">
             <div class="auth-brand-logo">
                 <img src="assets/laundrymatic-logo.png">
@@ -23,117 +24,117 @@
             <div class="auth-brand-name">LaundryMatic</div>
             <div class="auth-brand-tag">IoT Smart Weighing System</div>
             <div class="auth-brand-desc">
-                Join LaundryMatic and take control of your laundry shop
-                with smart IoT-powered management tools.
+                Automate your laundry operations with real-time weight monitoring,
+                accurate billing, and digital record keeping.
             </div>
             <div class="auth-brand-dots">
+                <span class="dot-active"></span>
                 <span class="dot"></span>
-                <span class="dot active"></span>
                 <span class="dot"></span>
             </div>
         </div>
 
-        <!-- Register form card -->
+        <!-- Right panel: the form -->
         <div class="auth-card">
 
             <div class="auth-card-header">
-                <div class="auth-card-title">Create account</div>
-                <div class="auth-card-subtitle">Set up your LaundryMatic admin account</div>
+                <div class="auth-card-title">Welcome Back</div>
+                <div class="auth-card-subtitle">Sign in to your LaundryMatic account</div>
             </div>
 
-            <div class="auth-error" id="register-error">
+            <!-- Error message box — hidden until JS shows it -->
+            <div class="auth-error" id="login-error">
                 <span><i data-lucide="triangle-alert"></i> </span>
-                <span id="register-error-msg"></span>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">First Name</label>
-                    <input class="form-input" type="text" id="reg-firstname" placeholder="Juan">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Shop Name</label>
-                    <input class="form-input" type="text" id="reg-shopname" placeholder="e.g. Wash & Go Laundry">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Last Name</label>
-                    <input class="form-input" type="text" id="reg-lastname" placeholder="dela Cruz">
-                </div>
+                <span id="login-error-msg">Invalid username or password.</span>
             </div>
 
             <div class="form-group">
                 <label class="form-label">Email</label>
-                <input class="form-input" type="email" id="reg-username" placeholder="you@example.com">
-                <div class="field-hint" id="username-hint"></div>
+                <input type="email" class="form-input" id="login-username" placeholder="you@example.com"
+                       autocomplete="username">
             </div>
 
             <div class="form-group">
                 <label class="form-label">Password</label>
                 <div class="input-with-icon">
-                    <input class="form-input" type="password" id="reg-password" placeholder="Min. 6 characters"
-                        oninput="checkPasswordStrength(this.value)">
-                    <button class="input-icon-btn" onclick="togglePassword('reg-password', this)">
+                    <input type="password" class="form-input" id="login-password" placeholder="Enter your password"
+                        autocomplete="current-password">
+                    <!-- Eye icon toggles password visibility -->
+                    <button class="input-icon-btn" onclick="togglePassword('login-password', this)">
                         <i data-lucide="eye"></i>
                     </button>
                 </div>
-                <!-- Password strength bar -->
-                <div class="strength-bar-wrap">
-                    <div class="strength-bar" id="strength-bar"></div>
-                </div>
-                <div class="field-hint" id="strength-label"></div>
             </div>
 
-            <div class="form-group">
-                <label class="form-label">Confirm Password</label>
-                <input class="form-input" type="password" id="reg-confirm" placeholder="Repeat your password">
-            </div>
-
-            <div class="form-group">
-                <label class="checkbox" style="display:flex;align-items:flex-start;gap:8px;font-weight:normal">
-                    <input type="checkbox" id="terms-checkbox" onchange="toggleRegisterButton()" style="margin-top:3px">
-                    <span>
-            I have read and agree to the
-            <a href="#" class="auth-link" onclick="openTermsModal(event)">Terms &amp; Conditions</a>.
-        </span>
+            <div class="auth-row">
+                <label class="checkbox">
+                    <input type="checkbox" id="remember-me" class="checkbox"> Remember me
                 </label>
+                <a href="#" class="auth-link" onclick="showForgotPassword()">Forgot password?</a>
             </div>
 
-            <div class="form-group">
-                <label class="checkbox" style="display:flex;align-items:flex-start;gap:8px;font-weight:normal">
-                    <input type="checkbox" id="privacy-checkbox" onchange="toggleRegisterButton()" style="margin-top:3px">
-                    <span>
-            I have read and acknowledge the
-            <a href="#" class="auth-link" onclick="openPrivacyModal(event)">Privacy Notice</a>
-            and, where required, consent to the collection and processing of my personal information as described in the Privacy Notice.
-        </span>
-                </label>
-            </div>
-
-            <button class="btn btn-primary btn-full" id="register-btn" onclick="handleRegister()" disabled>
-                Create Account
+            <button class="btn btn-primary btn-full" onclick="handleLogin()">
+                Sign In
             </button>
 
             <div class="auth-divider"><span>or</span></div>
 
             <div class="auth-footer-text">
-                Already have an account?
-                <a class="auth-link" href="index.html">Sign in here</a>
+                Don't have an account?
+                <a href="register.html" class="auth-link">Create one here</a>
             </div>
-
         </div>
-
     </div>
 
-    <!-- TERMS AND CONDITIONS MODAL (read-only viewer, opened from the checkbox link) -->
-    <div class="modal-overlay" id="terms-modal">
-        <div class="modal" style="width:640px;max-width:95vw">
+    <!-- Forgot Password Modal -->
+    <div class="modal-overlay" id="forgot-modal">
+        <div class="modal">
             <div class="modal-title">
-                Terms and Conditions
-                <button class="modal-close" onclick="closeTermsModal()">
+                Reset Password
+                <button class="modal-close" onclick="closeForgotPassword()">
                     <i data-lucide="x"></i>
                 </button>
             </div>
-            <div style="max-height:60vh;overflow-y:auto;padding-right:8px;font-size:0.85rem;line-height:1.6;color:var(--muted2)">
+            <div class="auth-card-subtitle" style="margin-bottom:20px;color:var(--muted2)">
+                Enter your email and we'll send you a link to reset your password.
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-input" id="reset-email" placeholder="you@example.com">
+            </div>
+            <div class="auth-error" id="reset-error" style="margin-bottom: 12px;">
+                <span><i data-lucide="triangle-alert"></i></span>
+                <span id="reset-error-msg"></span>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeForgotPassword()">Cancel</button>
+                <button class="btn btn-primary" id="reset-btn" onclick="handleReset()">Send Reset Link</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TERMS AND CONDITIONS + PRIVACY NOTICE GATE — shown to logged-in
+ users who haven't completed the current version of either
+ document. Only the outdated tab starts active, but BOTH
+ checkboxes must be checked before Accept enables — this covers
+ the case where both happen to be outdated at once. No close/X
+ button: they must Accept, or log out. -->
+    <div class="modal-overlay" id="terms-gate-modal">
+        <div class="modal" style="width:640px;max-width:95vw">
+            <div class="modal-title">
+                Terms &amp; Privacy Update
+            </div>
+            <div class="auth-card-subtitle" style="margin-bottom:16px;color:var(--muted2)">
+                Please review and complete the section(s) below to continue.
+            </div>
+
+            <div class="tab-pills" style="margin-bottom:12px">
+                <button class="tab-pill active" id="gate-tab-terms" onclick="switchGateTab('terms')">Terms &amp; Conditions</button>
+                <button class="tab-pill" id="gate-tab-privacy" onclick="switchGateTab('privacy')">Privacy Notice</button>
+            </div>
+
+            <div id="gate-content-terms" style="max-height:42vh;overflow-y:auto;padding-right:8px;font-size:0.85rem;line-height:1.6;color:var(--muted2)">
+                <!-- Paste the exact same content from register.html's #terms-modal here -->
                 <p style="font-size:0.75rem"><strong>Last Updated: August 29, 2026</strong></p>
                 <p>Welcome to <strong>LaundryMatic</strong>, an IoT-based smart weighing and laundry management system designed to assist laundry service providers and customers in managing laundry transactions, customer information, laundry weight, order status, and related services.</p>
 
@@ -197,22 +198,8 @@
                 <p>By checking the "I have read and agree to the Terms and Conditions" checkbox, you confirm that you have read, understood, and agreed to all the terms stated above.</p>
                 <p>If you do not agree to these Terms and Conditions, you should not proceed with creating an account or using the LaundryMatic system.</p>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-primary" onclick="closeTermsModal()">Close</button>
-            </div>
-        </div>
-    </div><!-- /terms-modal -->
-
-    <!-- PRIVACY NOTICE MODAL (read-only viewer, opened from the checkbox link) -->
-    <div class="modal-overlay" id="privacy-modal">
-        <div class="modal" style="width:640px;max-width:95vw">
-            <div class="modal-title">
-                Privacy Notice
-                <button class="modal-close" onclick="closePrivacyModal()">
-                    <i data-lucide="x"></i>
-                </button>
-            </div>
-            <div style="max-height:60vh;overflow-y:auto;padding-right:8px;font-size:0.85rem;line-height:1.6;color:var(--muted2)">
+            <div id="gate-content-privacy" style="display:none;max-height:42vh;overflow-y:auto;padding-right:8px;font-size:0.85rem;line-height:1.6;color:var(--muted2)">
+                <!-- Paste the exact same content from register.html's #privacy-modal here -->
                 <p style="font-size:0.75rem"><strong>Last Updated: August 29, 2026</strong></p>
 
                 <h4>1. Introduction</h4>
@@ -255,11 +242,25 @@
                 <h4>13. Acknowledgment</h4>
                 <p>By checking the acknowledgment checkbox, you confirm that you have read and understood this Privacy Notice, and, where required, consent to the collection and processing of your personal information as described above.</p>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-primary" onclick="closePrivacyModal()">Close</button>
+
+            <label class="checkbox" style="display:flex;align-items:flex-start;gap:8px;font-weight:normal;margin-top:16px">
+                <input type="checkbox" id="gate-terms-checkbox" onchange="toggleTermsGateAccept()" style="margin-top:3px">
+                <span>I have read and agree to the Terms &amp; Conditions.</span>
+            </label>
+            <label class="checkbox" style="display:flex;align-items:flex-start;gap:8px;font-weight:normal;margin-top:10px">
+                <input type="checkbox" id="gate-privacy-checkbox" onchange="toggleTermsGateAccept()" style="margin-top:3px">
+                <span>I have read and acknowledge the Privacy Notice and, where required, consent to the collection and processing of my personal information as described in the Privacy Notice.</span>
+            </label>
+
+            <div class="modal-footer" style="justify-content:space-between">
+                <a href="#" class="auth-link" style="font-size:0.8rem" onclick="handleLogout(); return false;">Not now — log out</a>
+                <button class="btn btn-primary" id="terms-gate-accept-btn" onclick="handleAcceptTermsGate()" disabled>
+                    Accept and Continue
+                </button>
             </div>
         </div>
-    </div><!-- /privacy-modal -->
+    </div><!-- /terms-gate-modal -->
+
 
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>

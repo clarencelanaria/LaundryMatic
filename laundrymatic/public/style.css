@@ -1841,6 +1841,9 @@ select.form-input option {
 }
 
 @media print {
+    #print-receipt-area .receipt-shop-name {
+    font-size: 1.05rem !important;
+  }
   body>* {
     display: none !important;
   }
@@ -2067,6 +2070,9 @@ select.form-input option {
 /* When browser prints, hide everything except the receipt    */
 
 @media print {
+    #print-receipt-area .receipt-shop-name {
+    font-size: 1.05rem !important;
+  }
   body>* {
     display: none !important;
   }
@@ -2077,21 +2083,28 @@ select.form-input option {
     top: 0;
     left: 0;
     width: 100%;
-    padding: 8px;
+    padding: 0;
     background: #fff;
   }
 
-  /* 58mm thermal paper — 56mm printable width, leaving ~1mm
-     margin on each side so nothing runs off the physical roll */
+  /* Locks the printable page itself to the actual 48mm preset with
+     zero browser margin — the card then fills 100% of that instead
+     of a guessed mm value, so it can never be wider than the paper */
+  @page {
+    size: 48mm auto;
+    margin: 0mm;
+  }
+
   #print-receipt-area #receipt-card {
     background: #fff !important;
     border: none !important;
     color: #000 !important;
     font-family: monospace;
-    font-size: 11px;
-    width: 56mm;
+    font-size: 10px;
+    width: 100%;
+    box-sizing: border-box;
     margin: 0 auto;
-    padding: 4px;
+    padding: 2mm;
   }
 
   /* Override QR box size for narrow paper */
@@ -2546,6 +2559,9 @@ select.form-input option {
 }
 
 @media print {
+    #print-receipt-area .receipt-shop-name {
+    font-size: 1.05rem !important;
+  }
     #print-report-area {
         display: block !important;
         position: fixed;

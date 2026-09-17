@@ -2612,6 +2612,7 @@ function updateStatusOverview(orders) {
 
     set('count-ongoing', ongoing);
     set('count-ready',   ready);
+    set('orders-badge',  ongoing);
 }
 
 // Tracks whether the unclaimed laundry list is currently expanded

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+    <title>LaundryMatic — Super Admin</title>
+    <link rel="stylesheet" href="style.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+
+    <!-- Scoped to this page only — doesn't touch the shared dashboard styling -->
+    <style>
+        .sa-wrapper {
+            max-width: 900px;
+            margin: 48px auto;
+            padding: 0 24px;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .sa-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .sa-header h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: 22px;
+            margin: 0;
+        }
+
+        .sa-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            border: 1px solid #e5e9f0;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .sa-table th, .sa-table td {
+            text-align: left;
+            padding: 12px 16px;
+            font-size: 14px;
+            border-bottom: 1px solid #eef1f5;
+        }
+
+        .sa-table th {
+            background: #f7f9fc;
+            font-weight: 600;
+            color: #556;
+        }
+
+        .sa-status {
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+
+        .sa-status.pending { background: #fff4e0; color: #a06a00; }
+        .sa-status.approved { background: #e3f8ec; color: #157a45; }
+        .sa-status.rejected { background: #fde8e8; color: #b3261e; }
+
+        .sa-actions button {
+            border: none;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            margin-right: 6px;
+        }
+
+        .sa-approve { background: #157a45; color: #fff; }
+        .sa-reject { background: #b3261e; color: #fff; }
+        .sa-actions button:disabled { opacity: 0.5; cursor: default; }
+
+        .sa-empty { text-align: center; padding: 40px; color: #889; }
+    </style>
+</head>
+
+<body>
+
+    <div class="sa-wrapper">
+        <div class="sa-header">
+            <h1>Super Admin — Admin Requests</h1>
+            <button class="btn btn-ghost" onclick="handleLogout()">Sign Out</button>
+        </div>
+
+        <table class="sa-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Shop</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="sa-table-body">
+                <!-- rows injected by superadmin.js -->
+            </tbody>
+        </table>
+
+        <div id="sa-empty" class="sa-empty" style="display:none;">No admin requests yet.</div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="firebase.js"></script>
+    <script src="auth.js"></script>
+    <script src="superadmin.js"></script>
+</body>
+
+</html>

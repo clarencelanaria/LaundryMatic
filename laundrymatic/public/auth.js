@@ -15,6 +15,8 @@
 async function checkAuthState() {
     const onIndexPage = window.location.pathname.includes('index');
     const onAuthPage = onIndexPage || window.location.pathname.includes('register');
+    const onPendingPage = window.location.pathname.includes('pending');
+    const onSuperAdminPage = window.location.pathname.includes('superadmin');
 
     auth.onAuthStateChanged(async user => {
         if (isRegistering) return;
@@ -39,8 +41,22 @@ async function checkAuthState() {
             return;
         }
 
-        // Both documents are current — normal existing behavior
-        if (onAuthPage) {
+        // Both documents are current — now check admin approval/role
+        const access = await getAdminAccess(user.uid);
+
+        if (access.role === 'superAdmin') {
+            if (!onSuperAdminPage) window.location.href = 'superadmin.html';
+            return;
+        }
+
+        if (access.status !== 'approved') {
+            if (!onPendingPage) window.location.href = 'pending.html';
+            return;
+        }
+
+        // Approved admin — existing behavior, plus bounce away from
+        // pages that don't apply to them
+        if (onAuthPage || onPendingPage || onSuperAdminPage) {
             window.location.href = 'dashboard.html';
         }
     });
@@ -84,6 +100,21 @@ async function hasCompletedAllAgreements(uid) {
         hasAcknowledgedCurrentPrivacy(uid),
     ]);
     return terms && privacy;
+}
+
+// Reads this admin's role/status once. Defaults status to 'approved'
+// when the field is missing entirely — this only matters for old
+// admin accounts you haven't manually backfilled yet, so nobody gets
+// locked out by accident. Brand-new registrations always write an
+// explicit 'pending' status (see handleRegister), so this default
+// never weakens the actual approval requirement for new admins.
+async function getAdminAccess(uid) {
+    const snap = await db.ref('admins/' + uid).once('value');
+    const data = snap.val() || {};
+    return {
+        role: data.role || 'admin',
+        status: data.status || 'approved',
+    };
 }
 
 // ── Login-page gate (index.html only) ────────────────────────
@@ -332,6 +363,8 @@ async function handleRegister() {
 
         await db.ref('admins/' + cred.user.uid).set({
             firstName, lastName, shopName, shopId, email,
+            role: 'admin',
+            status: 'pending',
             termsAccepted: true,
             termsAcceptedAt: new Date().toISOString(),
             termsVersion: CURRENT_TERMS_VERSION,

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+    <title>LaundryMatic — Pending Approval</title>
+    <link rel="stylesheet" href="style.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+</head>
+
+<body class="auth-body">
+
+    <div class="auth-wrapper">
+
+        <!-- Left panel: branding, same as index.html -->
+        <div class="auth-brand">
+            <div class="auth-brand-logo">
+                <img src="assets/laundrymatic-logo.png">
+            </div>
+            <div class="auth-brand-name">LaundryMatic</div>
+            <div class="auth-brand-tag">IoT Smart Weighing System</div>
+            <div class="auth-brand-desc">
+                Automate your laundry operations with real-time weight monitoring,
+                accurate billing, and digital record keeping.
+            </div>
+        </div>
+
+        <!-- Right panel: status message -->
+        <div class="auth-card">
+            <div class="auth-card-header">
+                <h2>Account Pending Approval</h2>
+                <p>
+                    Your administrator account has been created but hasn't been
+                    approved yet. A Super Admin needs to review and approve your
+                    request before you can access the dashboard.
+                </p>
+                <p>
+                    You don't need to do anything else right now — check back
+                    later, or contact your system administrator if this is
+                    taking longer than expected.
+                </p>
+            </div>
+
+            <button class="btn btn-ghost btn-full" onclick="handleLogout()">Sign Out</button>
+        </div>
+
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="firebase.js"></script>
+    <script src="auth.js"></script>
+</body>
+
+</html>

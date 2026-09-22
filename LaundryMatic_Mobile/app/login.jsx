@@ -66,6 +66,14 @@ export default function LoginScreen() {
         await clearRememberedEmail();
       }
 
+      // Real-email check comes first — Firebase already confirmed this
+      // address can receive mail before we trust anything else
+      await cred.user.reload();
+      if (!cred.user.emailVerified) {
+        router.replace('/verifyEmail');
+        return;
+      }
+
       // Route based on Terms acceptance instead of always going
       // straight to the dashboard
       const completed = await hasCompletedAllAgreements(cred.user.uid);

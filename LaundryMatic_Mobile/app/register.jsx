@@ -15,7 +15,7 @@ import {
     auth, registerCustomerMobile, checkDuplicateContact,
     CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION,
 } from '../utils/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 
 // Password strength checker
 function getStrength(value) {
@@ -121,6 +121,7 @@ export default function RegisterScreen() {
 
       // "username" holds an email — this creates the real Firebase Auth account
       const cred = await createUserWithEmailAndPassword(auth, username, password);
+      await sendEmailVerification(cred.user);
 
             // Customer profile keyed by the same uid as the auth account
             await registerCustomerMobile(cred.user.uid, {
@@ -139,9 +140,10 @@ export default function RegisterScreen() {
 
             setLoading(false);
 
-            // Go to QR screen — pass the userId so it can display the QR
+            // Go to the verification screen instead of straight to the QR —
+            // it forwards to showQR itself once the email is verified
             router.replace({
-                pathname: '/showQR',
+                pathname: '/verifyEmail',
                 params: { userId: cred.user.uid, firstName, lastName, contact1 }
             });
 

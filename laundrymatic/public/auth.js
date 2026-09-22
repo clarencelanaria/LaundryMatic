@@ -17,12 +17,26 @@ async function checkAuthState() {
     const onAuthPage = onIndexPage || window.location.pathname.includes('register');
     const onPendingPage = window.location.pathname.includes('pending');
     const onSuperAdminPage = window.location.pathname.includes('superadmin');
+    const onVerifyPage = window.location.pathname.includes('verify-email');
 
     auth.onAuthStateChanged(async user => {
         if (isRegistering) return;
         if (!user) {
             hideTermsGate();
             if (!onAuthPage) window.location.href = 'index.html';
+            return;
+        }
+
+        // Real-email check: Firebase already confirmed this address can
+        // receive mail, before we trust anything else about this account.
+        // Only reload when the cached value says "not verified" — if they
+        // clicked the link in another tab, this picks that up without
+        // adding a network round-trip to every normal page load.
+        if (!user.emailVerified) {
+            await user.reload();
+        }
+        if (!user.emailVerified) {
+            if (!onVerifyPage) window.location.href = 'verify-email.html';
             return;
         }
 
@@ -56,7 +70,7 @@ async function checkAuthState() {
 
         // Approved admin — existing behavior, plus bounce away from
         // pages that don't apply to them
-        if (onAuthPage || onPendingPage || onSuperAdminPage) {
+        if (onAuthPage || onPendingPage || onSuperAdminPage || onVerifyPage) {
             window.location.href = 'dashboard.html';
         }
     });
@@ -302,6 +316,58 @@ function handleLogout() {
     });
 }
 
+/* ─── EMAIL VERIFICATION (verify-email.html) ──────────────────*/
+
+function showVerifyStatus(message) {
+    const el = document.getElementById('verify-status-msg');
+    if (!el) return;
+    el.textContent = message;
+    el.style.display = 'block';
+}
+
+async function handleResendVerification(btnEl) {
+    const user = auth.currentUser;
+    if (!user) return;
+    btnEl.disabled = true;
+    btnEl.textContent = 'Sending...';
+    try {
+        await user.sendEmailVerification();
+        showVerifyStatus('Verification email sent — check your inbox (and spam folder).');
+    } catch (err) {
+        showVerifyStatus(
+            err.code === 'auth/too-many-requests'
+                ? 'Too many attempts — please wait a few minutes before trying again.'
+                : 'Could not send the email right now. Check your connection and try again.'
+        );
+    } finally {
+        btnEl.disabled = false;
+        btnEl.textContent = 'Resend Verification Email';
+    }
+}
+
+// Firebase caches emailVerified on the client — reload() pulls the
+// real, current value from the server before we re-check it
+async function handleCheckVerification(btnEl) {
+    const user = auth.currentUser;
+    if (!user) return;
+    btnEl.disabled = true;
+    btnEl.textContent = 'Checking...';
+    try {
+        await user.reload();
+        if (user.emailVerified) {
+            window.location.reload();
+        } else {
+            showVerifyStatus('Still not verified — click the link in your email first, then try again.');
+            btnEl.disabled = false;
+            btnEl.textContent = "I've Verified My Email";
+        }
+    } catch (err) {
+        showVerifyStatus('Could not check right now. Check your connection and try again.');
+        btnEl.disabled = false;
+        btnEl.textContent = "I've Verified My Email";
+    }
+}
+
 /* ─── REGISTER ───────────────────────────────────────────────*/
 
 async function handleRegister() {
@@ -345,6 +411,7 @@ async function handleRegister() {
 
     try {
         cred = await auth.createUserWithEmailAndPassword(email, password);
+        await cred.user.sendEmailVerification();
 
         let baseSlug = shopName.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
         if (!baseSlug) baseSlug = 'shop';

@@ -19,6 +19,13 @@ export default function IndexScreen() {
                 router.replace('/login');
                 return;
             }
+
+            await user.reload();
+            if (!user.emailVerified) {
+                router.replace('/verifyEmail');
+                return;
+            }
+
             const completed = await hasCompletedAllAgreements(user.uid);
             router.replace(completed ? '/dashboard' : { pathname: '/terms', params: { mode: 'gate' } });
         });

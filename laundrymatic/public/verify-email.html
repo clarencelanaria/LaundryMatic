@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+    <title>LaundryMatic — Verify Your Email</title>
+    <link rel="stylesheet" href="style.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+</head>
+
+<body class="auth-body">
+
+    <div class="auth-wrapper">
+
+        <!-- Left panel: branding, same as index.html -->
+        <div class="auth-brand">
+            <div class="auth-brand-logo">
+                <img src="assets/laundrymatic-logo.png">
+            </div>
+            <div class="auth-brand-name">LaundryMatic</div>
+            <div class="auth-brand-tag">IoT Smart Weighing System</div>
+            <div class="auth-brand-desc">
+                Automate your laundry operations with real-time weight monitoring,
+                accurate billing, and digital record keeping.
+            </div>
+        </div>
+
+        <!-- Right panel: verification status -->
+        <div class="auth-card">
+            <div class="auth-card-header">
+                <h2>Verify Your Email</h2>
+                <p>
+                    Account created. We sent a confirmation link to
+                    <strong id="verify-email-address">your email address</strong>.
+                    Open it and click the link, then come back here and press
+                    the button below.
+                </p>
+            </div>
+
+            <p id="verify-status-msg" style="display:none; margin-bottom:10px; font-size:14px;"></p>
+
+            <button class="btn btn-primary btn-full" onclick="handleCheckVerification(this)">
+                I've Verified My Email
+            </button>
+            <button class="btn btn-ghost btn-full" onclick="handleResendVerification(this)" style="margin-top: 10px;">
+                Resend Verification Email
+            </button>
+            <button class="btn btn-ghost btn-full" onclick="handleLogout()" style="margin-top: 10px;">
+                Sign Out
+            </button>
+        </div>
+
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="firebase.js"></script>
+    <script src="auth.js"></script>
+    <script>
+        auth.onAuthStateChanged(user => {
+            if (user) document.getElementById('verify-email-address').textContent = user.email;
+        });
+    </script>
+</body>
+
+</html>

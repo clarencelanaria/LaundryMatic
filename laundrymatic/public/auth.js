@@ -415,18 +415,22 @@ async function handleRegister() {
 
         let baseSlug = shopName.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
         if (!baseSlug) baseSlug = 'shop';
-        let shopId = baseSlug;
-        let suffix = 1;
-        while ((await db.ref('shops/' + shopId).once('value')).exists()) {
-            shopId = `${baseSlug}-${suffix}`;
-            suffix++;
-        }
+        const shopId = baseSlug;
 
-        await db.ref('shops/' + shopId).set({
-            name: shopName,
-            createdAt: new Date().toISOString(),
-            createdBy: cred.user.uid,
-        });
+        // Same shop name → same shopId, so a second admin registering
+        // under an identical name automatically joins that shop and
+        // shares its orders/settings/live weight. A different shop name
+        // always produces a different shopId, so unrelated shops stay
+        // separate. We only create the shops/ record the first time —
+        // joining an existing shop must not overwrite its createdBy/createdAt.
+        const existingShop = await db.ref('shops/' + shopId).once('value');
+        if (!existingShop.exists()) {
+            await db.ref('shops/' + shopId).set({
+                name: shopName,
+                createdAt: new Date().toISOString(),
+                createdBy: cred.user.uid,
+            });
+        }
 
         await db.ref('admins/' + cred.user.uid).set({
             firstName, lastName, shopName, shopId, email,

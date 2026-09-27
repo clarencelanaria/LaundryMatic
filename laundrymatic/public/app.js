@@ -203,7 +203,7 @@ function renderOrders(target, data) {
       <td><span style="font-size:0.8rem;color:var(--muted2)">${o.service}</span></td>
       <td><span class="cost-cell">₱${cost(o.weight).toFixed(2)}</span></td>
       <td>${statusBadge(o.status)}</td>
-      <td><span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--muted2)">${o.time}</span></td>
+      <td><span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--muted2)">${o.date || '—'} ${o.time || ''}</span></td>
     </tr>
   `).join('');
 
@@ -1506,6 +1506,7 @@ async function loadOrders() {
         weight:      o.kg,
         service:     o.service,
         status:      o.status,
+        date:        o.dateIn,
         time:        o.timeIn,
         orderId:     o.id || o.localId,
         pendingSync: !!o.localId,

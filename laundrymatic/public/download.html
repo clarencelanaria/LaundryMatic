@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+    <title>LaundryMatic — Download</title>
+    <link rel="stylesheet" href="style.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+
+    <!-- Scoped to this page only — doesn't touch the shared site styling -->
+    <style>
+        .dl-wrapper {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 48px 24px 64px;
+            text-align: center;
+            font-family: var(--font-body);
+        }
+
+        .dl-logo {
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 12px;
+        }
+
+        .dl-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .dl-brand-name {
+            font-family: var(--font-head);
+            font-weight: 800;
+            font-size: 24px;
+            color: var(--text);
+        }
+
+        .dl-tagline {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            letter-spacing: 1.5px;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-bottom: 32px;
+        }
+
+        .dl-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 32px 24px;
+        }
+
+        .dl-heading {
+            font-family: var(--font-head);
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        .dl-desc {
+            font-size: 14px;
+            color: var(--muted2);
+            margin-bottom: 24px;
+        }
+
+        .dl-download-btn {
+            display: inline-block;
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            background: var(--accent);
+            color: #fff;
+            font-family: var(--font-head);
+            font-weight: 700;
+            font-size: 16px;
+            text-decoration: none;
+            letter-spacing: 0.5px;
+            transition: opacity 0.15s ease;
+        }
+
+        .dl-download-btn:hover {
+            opacity: 0.9;
+        }
+
+        .dl-version {
+            margin-top: 12px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .dl-divider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 28px 0 20px;
+            color: var(--muted);
+            font-size: 12px;
+            font-family: var(--font-mono);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .dl-divider::before,
+        .dl-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .dl-qr-box {
+            display: inline-block;
+            background: #fff;
+            padding: 16px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+
+        #dl-qr-canvas {
+            display: block;
+        }
+
+        .dl-qr-label {
+            margin-top: 10px;
+            font-size: 13px;
+            color: var(--muted2);
+        }
+
+        .dl-qr-save {
+            display: inline-block;
+            margin-top: 10px;
+            font-size: 12px;
+            color: var(--accent2);
+            text-decoration: underline;
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-family: var(--font-body);
+        }
+
+        .dl-notice {
+            margin-top: 28px;
+            text-align: left;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 16px;
+            font-size: 12.5px;
+            color: var(--muted2);
+            line-height: 1.5;
+        }
+
+        .dl-notice strong {
+            color: var(--text);
+            display: block;
+            margin-bottom: 4px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+
+<body style="background:var(--bg);">
+
+    <div class="dl-wrapper">
+
+        <div class="dl-logo">
+            <img src="assets/laundrymatic-logo.png" alt="LaundryMatic">
+        </div>
+        <div class="dl-brand-name">LaundryMatic</div>
+        <div class="dl-tagline">IoT Smart Weighing System</div>
+
+        <div class="dl-card">
+            <div class="dl-heading">Download LaundryMatic</div>
+            <div class="dl-desc">Download the LaundryMatic mobile application for Android.</div>
+
+            <a id="dl-download-btn" class="dl-download-btn"
+                href="https://github.com/clarencelanaria/LaundryMatic/releases/latest/download/LaundryMatic.apk">
+                DOWNLOAD APK
+            </a>
+            <div class="dl-version">Latest Version: 1.0.0</div>
+
+            <div class="dl-divider">or scan to download</div>
+
+            <div class="dl-qr-box">
+                <canvas id="dl-qr-canvas"></canvas>
+            </div>
+            <div class="dl-qr-label">Scan with your phone's camera</div>
+            <br>
+            <button class="dl-qr-save" onclick="downloadQrImage()">Save QR as image</button>
+
+            <div class="dl-notice">
+                <strong>Android devices only</strong>
+                Because this app is distributed directly as an APK, Android may
+                ask you to allow installation from this source. This is
+                expected — tap "Allow" or "Install anyway" to continue.
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+        // Encodes whatever URL this page is actually being served from —
+        // so the QR is always correct whether it's the .web.app domain,
+        // .firebaseapp.com, or a custom domain later, with no hardcoding.
+        const pageUrl = window.location.origin + window.location.pathname;
+
+        const qr = new QRCode(document.createElement('div'), {
+            text: pageUrl,
+            width: 512,
+            height: 512,
+            correctLevel: QRCode.CorrectLevel.H,
+        });
+
+        // QRCode.js draws into a hidden div — copy its canvas onto the
+        // visible one, sized down for display but kept high-res underneath
+        window.addEventListener('load', () => {
+            const sourceCanvas = qr._el.querySelector('canvas');
+            const displayCanvas = document.getElementById('dl-qr-canvas');
+            displayCanvas.width = sourceCanvas.width;
+            displayCanvas.height = sourceCanvas.height;
+            displayCanvas.style.width = '220px';
+            displayCanvas.style.height = '220px';
+            displayCanvas.getContext('2d').drawImage(sourceCanvas, 0, 0);
+        });
+
+        function downloadQrImage() {
+            const canvas = document.getElementById('dl-qr-canvas');
+            const link = document.createElement('a');
+            link.download = 'laundrymatic-qr.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+    </script>
+</body>
+
+</html>

@@ -457,6 +457,7 @@ function showPage(page, el) {
     customers: 'customers',
     notifications: 'Notifications',
     settings: 'Settings',
+    mobileapp: 'Mobile App',
   };
   document.getElementById('page-title').textContent = titles[page] || page;
 
@@ -469,6 +470,54 @@ function showPage(page, el) {
   if (page === 'reports') {
       loadReport();
   }
+
+  if (page === 'mobileapp') {
+      renderMobileAppQr();
+  }
+}
+
+// ── MOBILE APP PAGE (QR + APK download) ─────────────────────
+// The QR always points at the public download page, never a
+// local/dev address, so a saved or printed QR keeps working.
+const MOBILE_APP_PAGE_URL = 'https://laundrymatic-51608.web.app/download.html';
+let mobileAppQrDrawn = false;
+
+function renderMobileAppQr() {
+    if (mobileAppQrDrawn) return;
+    const isLocal = !['http:', 'https:'].includes(window.location.protocol)
+        || ['localhost', '127.0.0.1'].includes(window.location.hostname);
+    const url = isLocal ? MOBILE_APP_PAGE_URL : window.location.origin + '/download.html';
+
+    const holder = document.createElement('div');
+    new QRCode(holder, {
+        text: url,
+        width: 512,
+        height: 512,
+        correctLevel: QRCode.CorrectLevel.H,
+    });
+
+    // Copy onto the visible canvas with a white border (the "quiet
+    // zone" scanners need) so the saved PNG is print-ready
+    const source = holder.querySelector('canvas') || holder.querySelector('img');
+    const display = document.getElementById('mobileapp-qr-canvas');
+    const quiet = 48;
+    const srcW = source.width || 512;
+    const srcH = source.height || 512;
+    display.width = srcW + quiet * 2;
+    display.height = srcH + quiet * 2;
+    const ctx = display.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, display.width, display.height);
+    ctx.drawImage(source, quiet, quiet, srcW, srcH);
+    mobileAppQrDrawn = true;
+}
+
+function downloadMobileAppQr() {
+    const canvas = document.getElementById('mobileapp-qr-canvas');
+    const link = document.createElement('a');
+    link.download = 'laundrymatic-qr.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
 }
 // Step 27: Chart Tab Switcher
 // ── DASHBOARD CHART — REAL DATA ─────────────────────────────

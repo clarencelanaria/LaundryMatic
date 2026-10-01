@@ -68,6 +68,11 @@
                     <i data-lucide="settings"></i>
                 </span> Settings
             </div>
+            <div class="nav-item" onclick="showPage('mobileapp', this)">
+                <span class="icon">
+                    <i data-lucide="smartphone"></i>
+                </span> Mobile App
+            </div>
         </nav>
 
         <div class="sidebar-bottom">
@@ -497,6 +502,37 @@
 </div>
 
         </div><!-- /page-settings -->
+
+                <!-- MOBILE APP PAGE -->
+        <div class="content page" id="page-mobileapp">
+            <div class="table-card" style="max-width:520px;margin:0 auto;">
+                <div class="table-head">
+                    <div>
+                        <div class="card-title">LaundryMatic Mobile App</div>
+                        <div class="card-subtitle">Show this QR code to customers so they can download the Android app</div>
+                    </div>
+                </div>
+                <div style="padding:24px 22px;text-align:center">
+                    <div style="display:inline-block;background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px">
+                        <canvas id="mobileapp-qr-canvas" style="display:block;width:240px;height:240px"></canvas>
+                    </div>
+                    <div class="card-subtitle" style="margin-top:10px">Scan with your phone's camera</div>
+
+                    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:18px">
+                        <a class="btn btn-primary" style="text-decoration:none"
+                            href="https://github.com/clarencelanaria/LaundryMatic/releases/latest/download/LaundryMatic.apk">Download APK</a>
+                        <button type="button" class="btn btn-ghost" onclick="downloadMobileAppQr()">Save QR as image</button>
+                    </div>
+
+                    <div style="margin-top:12px;font-family:var(--font-mono);font-size:0.72rem;color:var(--muted)">Latest Version: 1.0.0</div>
+
+                    <div style="margin-top:22px;text-align:left;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:0.78rem;color:var(--muted2);line-height:1.5">
+                        <strong style="color:var(--text);display:block;margin-bottom:2px">Android devices only</strong>
+                        Because this app is distributed directly as an APK, Android may ask you to allow installation from this source.
+                    </div>
+                </div>
+            </div>
+        </div><!-- /page-mobileapp -->
 
         <!-- CUSTOMERS PAGE -->
         <div class="content page" id="page-customers">

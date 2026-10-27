@@ -99,10 +99,8 @@
 
                 <div class="scan-input-wrap" id="scan-wrap">
                     <div class="live-dot"></div>
-                    <input class="scan-input" type="text" id="scan-input"
-       placeholder="Scan customer or job order QR..."
-       onkeydown="if (event.key === 'Enter') handleQRScan(this.value)"
-       autocomplete="off">
+                    <input class="scan-input" type="text" id="scan-input" placeholder="Scan customer or job order QR..."
+                        onkeydown="if (event.key === 'Enter') handleQRScan(this.value)" autocomplete="off">
                 </div>
 
                 <div class="sensor-indicator">
@@ -110,7 +108,8 @@
                     Sensor Active
                 </div>
 
-                                <div class="sensor-indicator" id="offline-indicator-pill" style="display:none;background:rgba(244,74,106,0.08);border-color:rgba(244,74,106,0.25);color:var(--danger)">
+                <div class="sensor-indicator" id="offline-indicator-pill"
+                    style="display:none;background:rgba(244,74,106,0.08);border-color:rgba(244,74,106,0.25);color:var(--danger)">
                     <div class="live-dot" style="background:var(--danger)"></div>
                     Offline — Saving Locally
                 </div>
@@ -147,7 +146,7 @@
                     <div class="kpi-sub">Laundry weighed today</div>
                 </div>
                 <div class="kpi orange">
-                    <div class="kpi-label">Revenue Today</div>
+                    <div class="kpi-label">Total Sales Today</div>
                     <div class="kpi-value" id="kpi-revenue">₱0</div>
                     <div class="kpi-sub">Collected from today's orders</div>
                 </div>
@@ -166,7 +165,8 @@
                     <span class="unclaimed-ribbon-text">Unclaimed Laundry</span>
                 </div>
                 <div class="unclaimed-ribbon-right">
-                    <span id="unclaimed-due" style="font-size:0.78rem;font-family:var(--font-mono);margin-right:10px">All paid</span>
+                    <span id="unclaimed-due"
+                        style="font-size:0.78rem;font-family:var(--font-mono);margin-right:10px">All paid</span>
                     <span class="unclaimed-ribbon-count" id="unclaimed-count">0</span>
                     <span class="unclaimed-ribbon-arrow" id="unclaimed-arrow">▾</span>
                 </div>
@@ -185,8 +185,10 @@
                     </div>
 
                     <div class="status-legend">
-                        <div class="legend-item"><span class="legend-dot" style="background:var(--accent2)"></span>On-Going</div>
-                        <div class="legend-item"><span class="legend-dot" style="background:var(--accent)"></span>Ready for Pick-Up</div>
+                        <div class="legend-item"><span class="legend-dot"
+                                style="background:var(--accent2)"></span>On-Going</div>
+                        <div class="legend-item"><span class="legend-dot" style="background:var(--accent)"></span>Ready
+                            for Pick-Up</div>
                     </div>
 
                     <div class="status-count-grid" style="grid-template-columns: repeat(2, 1fr)">
@@ -227,7 +229,7 @@
                     </div>
                     <div class="table-search">
                         <i data-lucide="search"></i>
-                         <input type="text" placeholder="Search orders..." oninput="filterTable(this.value)">
+                        <input type="text" placeholder="Search orders..." oninput="filterTable(this.value)">
                     </div>
                 </div>
                 <table>
@@ -261,7 +263,7 @@
                     <div style="display:flex;gap:10px;align-items:center">
                         <div class="table-search">
                             <i data-lucide="search"></i>
-                             <input type="text" placeholder="Search..." oninput="filterTable(this.value)">
+                            <input type="text" placeholder="Search..." oninput="filterTable(this.value)">
                         </div>
                         <button class="btn btn-primary" onclick="openModal()">
                             <i data-lucide="plus"></i> New Job Order</button>
@@ -316,13 +318,19 @@
             <div style="display:flex;align-items:center;justify-content:space-between;
                 margin-bottom:20px;flex-wrap:wrap;gap:12px">
                 <div class="tab-pills">
-                    <button class="tab-pill active" id="report-tab-daily"   onclick="setReportPeriod('daily', this)">Daily</button>
-                    <button class="tab-pill"        id="report-tab-weekly"  onclick="setReportPeriod('weekly', this)">Weekly</button>
-                    <button class="tab-pill"        id="report-tab-monthly" onclick="setReportPeriod('monthly', this)">Monthly</button>
-                    <button class="tab-pill"        id="report-tab-yearly"  onclick="setReportPeriod('yearly', this)">Yearly</button>
-                    <button class="tab-pill"        id="report-tab-custom"  onclick="setReportPeriod('custom', this)">Custom</button>
+                    <button class="tab-pill active" id="report-tab-daily"
+                        onclick="setReportPeriod('daily', this)">Daily</button>
+                    <button class="tab-pill" id="report-tab-weekly"
+                        onclick="setReportPeriod('weekly', this)">Weekly</button>
+                    <button class="tab-pill" id="report-tab-monthly"
+                        onclick="setReportPeriod('monthly', this)">Monthly</button>
+                    <button class="tab-pill" id="report-tab-yearly"
+                        onclick="setReportPeriod('yearly', this)">Yearly</button>
+                    <button class="tab-pill" id="report-tab-custom"
+                        onclick="setReportPeriod('custom', this)">Custom</button>
                 </div>
-                <button class="btn btn-ghost" onclick="printReport()"><i data-lucide="printer"></i> Print Report</button>
+                <button class="btn btn-ghost" onclick="printReport()"><i data-lucide="printer"></i> Print
+                    Report</button>
             </div>
 
             <!-- Custom date range — only shown when Custom tab is active -->
@@ -408,127 +416,147 @@
         <!-- ── SETTINGS PAGE ──────────────────────────── -->
         <div class="content page" id="page-settings">
 
-                        <div class="settings-wrap">
+            <div class="settings-wrap">
 
-    <!-- Active Pricing Mode toggle -->
-    <div class="table-card" style="margin-bottom:20px">
-        <div class="table-head">
-            <div class="card-title">Pricing Mode</div>
-        </div>
-        <div style="padding:20px 22px">
-            <div class="card-subtitle" style="margin-bottom:12px">
-                Choose which pricing system is used to calculate new job order costs. Both configurations below stay saved and editable no matter which one is active.
-            </div>
-            <div class="payment-toggle">
-                <button type="button" class="payment-option-btn active" id="pricing-mode-flat-btn" onclick="setPricingMode('flat')">Previous Pricing</button>
-                <button type="button" class="payment-option-btn" id="pricing-mode-tiered-btn" onclick="setPricingMode('tiered')">New Tiered Pricing</button>
-            </div>
-        </div>
-    </div>
+                <!-- Active Pricing Mode toggle -->
+                <div class="table-card" style="margin-bottom:20px">
+                    <div class="table-head">
+                        <div class="card-title">Pricing Mode</div>
+                    </div>
+                    <div style="padding:20px 22px">
+                        <div class="card-subtitle" style="margin-bottom:12px">
+                            Choose which pricing system is used to calculate new job order costs. Both configurations
+                            below stay saved and editable no matter which one is active.
+                        </div>
+                        <div class="payment-toggle">
+                            <button type="button" class="payment-option-btn active" id="pricing-mode-flat-btn"
+                                onclick="setPricingMode('flat')">Previous Pricing</button>
+                            <button type="button" class="payment-option-btn" id="pricing-mode-tiered-btn"
+                                onclick="setPricingMode('tiered')">New Tiered Pricing</button>
+                        </div>
+                    </div>
+                </div>
 
-    <!-- Both pricing configurations side by side — no scrolling
+                <!-- Both pricing configurations side by side — no scrolling
          needed to compare or edit either one -->
-    <div class="pricing-columns">
+                <div class="pricing-columns">
 
-        <!-- Previous Pricing (Flat Rate) -->
-        <div class="table-card pricing-column-card">
-            <div class="table-head">
-                <div>
-                    <div class="card-title" style="display:flex;align-items:center;gap:8px">
-                        Previous Pricing (Flat Rate)
-                        <span class="nav-badge" id="pricing-flat-active-badge" style="background:var(--accent);display:inline-flex">ACTIVE</span>
+                    <!-- Previous Pricing (Flat Rate) -->
+                    <div class="table-card pricing-column-card">
+                        <div class="table-head">
+                            <div>
+                                <div class="card-title" style="display:flex;align-items:center;gap:8px">
+                                    Previous Pricing (Flat Rate)
+                                    <span class="nav-badge" id="pricing-flat-active-badge"
+                                        style="background:var(--accent);display:inline-flex">ACTIVE</span>
+                                </div>
+                                <div class="card-subtitle">The original system — a rate per kilogram with a minimum
+                                    charge.</div>
+                            </div>
+                        </div>
+                        <div style="padding:20px 22px">
+                            <div class="form-group">
+                                <label class="form-label">Rate per Kilogram (₱)</label>
+                                <input class="form-input" type="number" step="0.01" id="rate-input" value="65.00">
+                                <div class="field-hint">Amount charged for every kilogram of laundry.</div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Minimum Kilo per Transaction (kg)</label>
+                                <input class="form-input" type="number" step="0.1" id="min-kg-input" value="3">
+                                <div class="field-hint">Loads lighter than this are billed as this weight. Example: 3 kg
+                                    at ₱25/kg with a 5 kg minimum is charged as 5 × ₱25 = ₱125.</div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-subtitle">The original system — a rate per kilogram with a minimum charge.</div>
-                </div>
-            </div>
-            <div style="padding:20px 22px">
-                <div class="form-group">
-                    <label class="form-label">Rate per Kilogram (₱)</label>
-                    <input class="form-input" type="number" step="0.01" id="rate-input" value="65.00">
-                    <div class="field-hint">Amount charged for every kilogram of laundry.</div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Minimum Kilo per Transaction (kg)</label>
-                    <input class="form-input" type="number" step="0.1" id="min-kg-input" value="3">
-                    <div class="field-hint">Loads lighter than this are billed as this weight. Example: 3 kg at ₱25/kg with a 5 kg minimum is charged as 5 × ₱25 = ₱125.</div>
-                </div>
-            </div>
-        </div>
 
-        <!-- New Tiered Pricing -->
-        <div class="table-card pricing-column-card">
-            <div class="table-head">
-                <div>
-                    <div class="card-title" style="display:flex;align-items:center;gap:8px">
-                        New Tiered Pricing
-                        <span class="nav-badge" id="pricing-tiered-active-badge" style="background:var(--accent);display:none">ACTIVE</span>
+                    <!-- New Tiered Pricing -->
+                    <div class="table-card pricing-column-card">
+                        <div class="table-head">
+                            <div>
+                                <div class="card-title" style="display:flex;align-items:center;gap:8px">
+                                    New Tiered Pricing
+                                    <span class="nav-badge" id="pricing-tiered-active-badge"
+                                        style="background:var(--accent);display:none">ACTIVE</span>
+                                </div>
+                                <div class="card-subtitle">A flat base price up to a starting weight, then a
+                                    per-kilogram charge, capped at a maximum price.</div>
+                            </div>
+                        </div>
+                        <div style="padding:20px 22px">
+                            <div class="form-group">
+                                <label class="form-label">Minimum / Base Price (₱)</label>
+                                <input class="form-input" type="number" step="0.01" id="tiered-base-price-input"
+                                    value="150.00">
+                                <div class="field-hint">Flat price charged up to the Starting Kilogram.</div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Starting Kilogram (kg)</label>
+                                <input class="form-input" type="number" step="0.1" id="tiered-start-kg-input" value="7">
+                                <div class="field-hint">Extra charges begin after this weight.</div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Extra Price per Kilogram (₱)</label>
+                                <input class="form-input" type="number" step="0.01" id="tiered-extra-per-kg-input"
+                                    value="25.00">
+                                <div class="field-hint">Amount added for every kilogram above the Starting Kilogram.
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Maximum Kilogram (kg)</label>
+                                <input class="form-input" type="number" step="0.1" id="tiered-max-kg-input" value="15">
+                                <div class="field-hint">Highest weight used for the normal tiered calculation.</div>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0">
+                                <label class="form-label">Maximum Price (₱)</label>
+                                <input class="form-input" type="number" step="0.01" id="tiered-max-price-input"
+                                    value="375.00">
+                                <div class="field-hint">Highest amount the customer can ever be charged — used for any
+                                    weight above the Maximum Kilogram.</div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-subtitle">A flat base price up to a starting weight, then a per-kilogram charge, capped at a maximum price.</div>
-                </div>
+
+                </div><!-- /pricing-columns -->
+
+                <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+
             </div>
-            <div style="padding:20px 22px">
-                <div class="form-group">
-                    <label class="form-label">Minimum / Base Price (₱)</label>
-                    <input class="form-input" type="number" step="0.01" id="tiered-base-price-input" value="150.00">
-                    <div class="field-hint">Flat price charged up to the Starting Kilogram.</div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Starting Kilogram (kg)</label>
-                    <input class="form-input" type="number" step="0.1" id="tiered-start-kg-input" value="7">
-                    <div class="field-hint">Extra charges begin after this weight.</div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Extra Price per Kilogram (₱)</label>
-                    <input class="form-input" type="number" step="0.01" id="tiered-extra-per-kg-input" value="25.00">
-                    <div class="field-hint">Amount added for every kilogram above the Starting Kilogram.</div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Maximum Kilogram (kg)</label>
-                    <input class="form-input" type="number" step="0.1" id="tiered-max-kg-input" value="15">
-                    <div class="field-hint">Highest weight used for the normal tiered calculation.</div>
-                </div>
-                <div class="form-group" style="margin-bottom:0">
-                    <label class="form-label">Maximum Price (₱)</label>
-                    <input class="form-input" type="number" step="0.01" id="tiered-max-price-input" value="375.00">
-                    <div class="field-hint">Highest amount the customer can ever be charged — used for any weight above the Maximum Kilogram.</div>
-                </div>
-            </div>
-        </div>
-
-    </div><!-- /pricing-columns -->
-
-    <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
-
-</div>
 
         </div><!-- /page-settings -->
 
-                <!-- MOBILE APP PAGE -->
+        <!-- MOBILE APP PAGE -->
         <div class="content page" id="page-mobileapp">
             <div class="table-card" style="max-width:520px;margin:0 auto;">
                 <div class="table-head">
                     <div>
                         <div class="card-title">LaundryMatic Mobile App</div>
-                        <div class="card-subtitle">Show this QR code to customers so they can download the Android app</div>
+                        <div class="card-subtitle">Show this QR code to customers so they can download the Android app
+                        </div>
                     </div>
                 </div>
                 <div style="padding:24px 22px;text-align:center">
-                    <div style="display:inline-block;background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px">
+                    <div
+                        style="display:inline-block;background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px">
                         <canvas id="mobileapp-qr-canvas" style="display:block;width:240px;height:240px"></canvas>
                     </div>
                     <div class="card-subtitle" style="margin-top:10px">Scan with your phone's camera</div>
 
                     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:18px">
                         <a class="btn btn-primary" style="text-decoration:none"
-                            href="https://github.com/clarencelanaria/LaundryMatic/releases/latest/download/LaundryMatic.apk">Download APK</a>
-                        <button type="button" class="btn btn-ghost" onclick="downloadMobileAppQr()">Save QR as image</button>
+                            href="https://github.com/clarencelanaria/LaundryMatic/releases/latest/download/LaundryMatic.apk">Download
+                            APK</a>
+                        <button type="button" class="btn btn-ghost" onclick="downloadMobileAppQr()">Save QR as
+                            image</button>
                     </div>
 
-                    <div style="margin-top:12px;font-family:var(--font-mono);font-size:0.72rem;color:var(--muted)">Latest Version: 1.1.0</div>
+                    <div style="margin-top:12px;font-family:var(--font-mono);font-size:0.72rem;color:var(--muted)">
+                        Latest Version: 1.1.0</div>
 
-                    <div style="margin-top:22px;text-align:left;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:0.78rem;color:var(--muted2);line-height:1.5">
+                    <div
+                        style="margin-top:22px;text-align:left;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:0.78rem;color:var(--muted2);line-height:1.5">
                         <strong style="color:var(--text);display:block;margin-bottom:2px">Android devices only</strong>
-                        Because this app is distributed directly as an APK, Android may ask you to allow installation from this source.
+                        Because this app is distributed directly as an APK, Android may ask you to allow installation
+                        from this source.
                     </div>
                 </div>
             </div>
@@ -565,12 +593,11 @@
                 <div class="table-head">
                     <div class="table-search">
                         <i data-lucide="search"></i>
-                        <input type="text" placeholder="Search customers..."
-                            oninput="filterCustomerTable(this.value)">
+                        <input type="text" placeholder="Search customers..." oninput="filterCustomerTable(this.value)">
                     </div>
                     <div style="display:flex;gap:10px;align-items:center">
                         <select class="form-input" id="customer-sort" onchange="setCustomerSort(this.value)"
-                                style="width:auto;padding:6px 12px;font-size:0.8rem">
+                            style="width:auto;padding:6px 12px;font-size:0.8rem">
                             <option value="default">Sort: Default</option>
                             <option value="alphabetical">Sort: A–Z</option>
                             <option value="recent">Sort: Last Added</option>
@@ -684,8 +711,10 @@
             <div class="form-group">
                 <label class="form-label">Payment</label>
                 <div class="payment-toggle">
-                    <button type="button" class="payment-option-btn active" id="pay-later-btn" onclick="setPaymentOption('later')">Pay Later</button>
-                    <button type="button" class="payment-option-btn" id="pay-now-btn" onclick="setPaymentOption('now')">Pay Now</button>
+                    <button type="button" class="payment-option-btn active" id="pay-later-btn"
+                        onclick="setPaymentOption('later')">Pay Later</button>
+                    <button type="button" class="payment-option-btn" id="pay-now-btn"
+                        onclick="setPaymentOption('now')">Pay Now</button>
                 </div>
             </div>
 
@@ -1038,16 +1067,14 @@
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label">Contact Number 1</label>
-                    <input class="form-input" type="tel" id="cust-contact1"
-                           placeholder="09171234567" maxlength="11"
-                           oninput="this.value = sanitizeContactInput(this.value)">
+                    <input class="form-input" type="tel" id="cust-contact1" placeholder="09171234567" maxlength="11"
+                        oninput="this.value = sanitizeContactInput(this.value)">
                     <div class="field-error" id="err-contact1"></div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Contact Number 2</label>
-                    <input class="form-input" type="tel" id="cust-contact2"
-                           placeholder="09281234567 (optional)" maxlength="11"
-                           oninput="this.value = sanitizeContactInput(this.value)">
+                    <input class="form-input" type="tel" id="cust-contact2" placeholder="09281234567 (optional)"
+                        maxlength="11" oninput="this.value = sanitizeContactInput(this.value)">
                     <div class="field-error" id="err-contact2"></div>
                 </div>
             </div>
@@ -1084,12 +1111,9 @@
             <div style="margin-bottom:16px">
                 <label class="form-label">Scan QR to Validate</label>
                 <div style="display:flex;gap:10px;align-items:center">
-                    <input class="form-input" type="text"
-                           id="validation-scan-input"
-                           placeholder="Scan any customer QR — no click needed"
-                           style="border-color:var(--accent);flex:1"
-                           onkeydown="handleValidationScan(event)"
-                           autocomplete="off">
+                    <input class="form-input" type="text" id="validation-scan-input"
+                        placeholder="Scan any customer QR — no click needed" style="border-color:var(--accent);flex:1"
+                        onkeydown="handleValidationScan(event)" autocomplete="off">
                 </div>
                 <div style="font-size:0.72rem;color:var(--muted2);
               margin-top:6px;font-family:var(--font-mono)">
@@ -1120,7 +1144,7 @@
 
     <!-- CUSTOMER PROFILE MODAL — opened by clicking name in table -->
     <div class="modal-overlay" id="customer-profile-modal">
-    <div class="modal" style="width:640px;max-width:95vw">
+        <div class="modal" style="width:640px;max-width:95vw">
             <div class="modal-title">
                 Customer Profile
                 <button class="modal-close" onclick="closeCustomerProfileModal()"><i data-lucide="x"></i></button>
@@ -1153,7 +1177,7 @@
                 </div>
             </div>
 
-                        <!-- Order history — wrapped in a fixed-height scroll box
+            <!-- Order history — wrapped in a fixed-height scroll box
                  so a long history never stretches the modal past the
                  screen. Service column removed (every order is
                  currently Wash & Dry), which freed enough width for
@@ -1279,7 +1303,7 @@
             LaundryMatic — Stick this QR on your laundry basket
         </div>
     </div>
-<!-- test -->
+    <!-- test -->
     <!-- PRINT RECEIPT AREA — only visible when printing -->
     <div id="print-receipt-area"></div>
 

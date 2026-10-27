@@ -435,7 +435,7 @@ async function handleRegister() {
         await db.ref('admins/' + cred.user.uid).set({
             firstName, lastName, shopName, shopId, email,
             role: 'admin',
-            status: 'pending',
+            status: 'approved',
             termsAccepted: true,
             termsAcceptedAt: new Date().toISOString(),
             termsVersion: CURRENT_TERMS_VERSION,
@@ -452,7 +452,7 @@ async function handleRegister() {
         // delete it so this email can be retried cleanly instead of
         // leaving a broken, orphaned account behind
         if (cred) {
-            await cred.user.delete().catch(() => {});
+            await cred.user.delete().catch(() => { });
         }
         isRegistering = false;
         showError('register-error', 'register-error-msg', err.message);

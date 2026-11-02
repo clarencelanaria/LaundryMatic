@@ -1,14 +1,14 @@
 // app/verifyEmail.jsx
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, Image, ScrollView,
+  View, Text, StyleSheet, Image, ScrollView, TouchableOpacity,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import AuthButton from '../components/AuthButton';
 import Colors from '../constants/colors';
-import { AlertTriangle, MailCheck } from 'lucide-react-native';
+import { AlertTriangle, MailCheck, ArrowLeft } from 'lucide-react-native';
 import { auth, hasCompletedAllAgreements } from '../utils/firebase';
-import { sendEmailVerification } from 'firebase/auth';
+import { sendEmailVerification, signOut } from 'firebase/auth';
 
 export default function VerifyEmailScreen() {
   const router = useRouter();
@@ -24,6 +24,17 @@ export default function VerifyEmailScreen() {
   const [statusMsg, setStatusMsg] = useState('');
 
   const email = auth.currentUser?.email || 'your email address';
+
+    // Signs out first. Otherwise index.jsx would see the unverified session
+  // and send the user straight back to this screen.
+  async function handleBack() {
+    try {
+      await signOut(auth);
+    } catch (err) {
+      // Even if sign-out fails, still leave the screen
+    }
+    router.replace('/login');
+  }
 
   async function handleResend() {
     const user = auth.currentUser;
@@ -77,6 +88,11 @@ export default function VerifyEmailScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.scroll}>
+      <TouchableOpacity style={styles.backBtn} onPress={handleBack} activeOpacity={0.7}>
+        <ArrowLeft color={Colors.muted2} size={18} />
+        <Text style={styles.backText}>Back to Sign In</Text>
+      </TouchableOpacity>
+
       <View style={styles.brand}>
         <View style={styles.logoBox}>
           <Image
@@ -127,6 +143,19 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bg,
     padding: 24,
     justifyContent: 'center',
+  },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    paddingVertical: 8,
+    marginBottom: 12,
+  },
+  backText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.muted2,
   },
   brand: {
     alignItems: 'center',

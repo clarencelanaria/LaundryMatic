@@ -5,7 +5,7 @@ LaundryMatic is a laundry management system for small laundry shops. It combines
 
 ## System Architecture
 
-![LaundryMatic System Architecture]
+
 [![Architecture diagram of clarencelanaria/laundrymatic](https://gitdiagram.com/clarencelanaria/laundrymatic/diagram.png)](https://gitdiagram.com/clarencelanaria/laundrymatic?utm_source=readme&utm_medium=picture)
 
 *LaundryMatic's overall system architecture, illustrating the relationship between its hardware, backend services, web dashboard, and mobile application.*

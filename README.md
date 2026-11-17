@@ -2,6 +2,9 @@
 
 LaundryMatic is a laundry management system for small laundry shops. It combines a load-cell weighing scale, a web admin dashboard, and a customer mobile app, so laundry can be weighed, priced, and tracked from drop-off to pick-up.
 
+[![Architecture diagram of clarencelanaria/laundrymatic](https://gitdiagram.com/clarencelanaria/laundrymatic/diagram.png)](https://gitdiagram.com/clarencelanaria/laundrymatic?utm_source=readme&utm_medium=picture)
+
+
 ## Features
 
 **Web admin dashboard**

@@ -108,9 +108,11 @@
                     <span class="topbar-pay-label">Payment</span>
                     <div class="payment-toggle">
                         <button type="button" class="payment-option-btn active" id="topbar-pay-later-btn"
-                            onclick="setPaymentOption('later')">Pay Later</button>
+                            onmousedown="event.preventDefault()"
+                            onclick="setPaymentOption('later'); focusScan()">Pay Later<span class="key-hint">←</span></button>
                         <button type="button" class="payment-option-btn" id="topbar-pay-now-btn"
-                            onclick="setPaymentOption('now')">Pay Now</button>
+                            onmousedown="event.preventDefault()"
+                            onclick="setPaymentOption('now'); focusScan()">Pay Now<span class="key-hint">→</span></button>
                     </div>
                 </div>
 
@@ -141,7 +143,7 @@
                 </div>
 
                 <button class="btn btn-ghost" onclick="openModal()">
-                    <i data-lucide="plus"></i> New Job Order</button>
+                    <i data-lucide="plus"></i> New Job Order<span class="key-hint">Enter</span></button>
                 <button class="btn btn-primary" onclick="refreshWeight()">
                     <i data-lucide="rotate-cw"></i> Refresh</button>
             </div>
@@ -1299,6 +1301,47 @@
         });
         document.querySelector('.nav').addEventListener('click', function () { setTimeout(fitKpiValues, 80); });
         setInterval(fitKpiValues, 1500);
+
+        
+        // Puts the cursor back in the scan box so the scanner works right away
+        function focusScan() {
+            if (document.querySelector('.modal-overlay.open')) return;
+            var s = document.getElementById('scan-input');
+            if (s) s.focus();
+        }
+
+        // Keyboard shortcuts:  Left arrow = Pay Later,  Right arrow = Pay Now,
+        // Enter (with nothing typed in the scan box) = New Job Order
+        document.addEventListener('keydown', function (e) {
+            if (e.repeat || e.ctrlKey || e.altKey || e.metaKey) return;
+
+            // Arrow keys only act when you are in the scan box (or nothing is
+            // focused), so they never get in the way of typing in forms
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                if (document.querySelector('.modal-overlay.open')) return;
+                var f = document.activeElement;
+                var scanBox = document.getElementById('scan-input');
+                if (f === scanBox || !f || f === document.body || f.closest('.topbar-pay')) {
+                    e.preventDefault();
+                    setPaymentOption(e.key === 'ArrowRight' ? 'now' : 'later');
+                    focusScan();
+                }
+                return;
+            }
+
+            if (e.key === 'Enter') {
+                if (document.querySelector('.modal-overlay.open')) return;
+                var a = document.activeElement;
+                var scan = document.getElementById('scan-input');
+                var onEmptyScan = a === scan && scan.value.trim() === '';
+                var onNothing = !a || a === document.body;
+                if (onEmptyScan || onNothing) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openModal();
+                }
+            }
+        }, true);
     </script>
 
     <script src="app.js"></script>

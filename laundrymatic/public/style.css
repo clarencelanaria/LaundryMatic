@@ -3339,3 +3339,51 @@ html {
     width: 200px;
   }
 }
+
+/* =====================================================================
+   Keyboard shortcut hints on the top bar buttons
+   (paste at the very bottom of style.css)
+   ===================================================================== */
+
+.key-hint {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--muted2);
+  background: rgba(23, 50, 68, 0.06);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  vertical-align: middle;
+}
+
+.btn-primary .key-hint {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* Phones and tablets have no keyboard, so hide the hints */
+@media screen and (max-width: 900px) {
+  .key-hint {
+    display: none;
+  }
+}
+
+/* On laptop screens let the top bar buttons drop to a second row
+   instead of running off the edge */
+@media screen and (max-width: 1500px) {
+  .topbar {
+    flex-wrap: wrap;
+    gap: 10px 16px;
+  }
+
+  .topbar-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px 10px;
+  }
+}

@@ -96,25 +96,11 @@ function formatRelativeTime(isoString) {
 let MIN_KG = 3; // overwritten by Firebase settings on load
 
 
-// New tiered pricing — fully driven by Settings, nothing hardcoded here.
-// Base price applies up to TIERED_START_KG; every kg beyond that adds
-// TIERED_EXTRA_PER_KG. Weight is clamped to TIERED_MAX_KG and price is
-// clamped to TIERED_MAX_PRICE as two independent safety ceilings.
-function calculateTieredCost(w) {
-    let price;
-    if (w <= TIERED_START_KG) {
-        price = TIERED_BASE_PRICE;
-    } else if (w <= TIERED_MAX_KG) {
-        const extraKg = Math.ceil(w - TIERED_START_KG);
-        price = TIERED_BASE_PRICE + (extraKg * TIERED_EXTRA_PER_KG);
-    } else {
-        // Above Maximum Kilogram — charge the flat ceiling directly,
-        // never a value derived from the tiered formula
-        price = TIERED_MAX_PRICE;
-    }
-    // Maximum Price is always the absolute ceiling, regardless of
-    // which branch above computed the price
-    return Math.min(price, TIERED_MAX_PRICE);
+function cost(w) {
+    // Anything below the minimum kilo is billed AS the minimum kilo —
+    // e.g. 3kg at ₱25/kg with a 5kg minimum bills as 5 × 25 = ₱125
+    const billableWeight = Math.max(w, MIN_KG);
+    return billableWeight * RATE;
 }
 
 // Builds the HTML string for a colored status badge

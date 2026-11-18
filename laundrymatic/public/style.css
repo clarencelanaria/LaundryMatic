@@ -3231,3 +3231,33 @@ html {
     padding: 28px 20px;
   }
 }
+
+/* =====================================================================
+   FIX: wider sidebar + numbers that always fit inside their cards
+   (paste at the very bottom of style.css)
+   ===================================================================== */
+
+/* Wider sidebar on computers/laptops (phones keep the slide-in menu) */
+@media screen and (min-width: 901px) {
+  .sidebar {
+    width: 272px;
+    min-width: 272px;
+  }
+}
+
+/* Card numbers shrink automatically to fit the card they are in */
+.kpi {
+  min-width: 0;
+  container-type: inline-size;
+}
+
+.kpi-label,
+.kpi-sub {
+  overflow-wrap: anywhere;
+}
+
+.kpi-value {
+  font-size: clamp(1.1rem, 17cqw, 2rem);
+  letter-spacing: -0.5px;
+  white-space: nowrap;
+}

@@ -3261,3 +3261,81 @@ html {
   letter-spacing: -0.5px;
   white-space: nowrap;
 }
+
+/* =====================================================================
+   Payment buttons in the top bar (Pay Later / Pay Now)
+   (paste at the very bottom of style.css)
+   ===================================================================== */
+
+.topbar-pay {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.topbar-pay-label {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted2);
+}
+
+.topbar-pay .payment-toggle {
+  gap: 0;
+  padding: 3px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.topbar-pay .payment-option-btn {
+  flex: none;
+  padding: 7px 14px;
+  border: 1px solid transparent;
+  background: transparent;
+  white-space: nowrap;
+}
+
+.topbar-pay .payment-option-btn.active {
+  border-color: var(--accent);
+  background: rgba(18, 184, 200, 0.14);
+  color: #0b7f8c;
+}
+
+@media screen and (max-width: 700px) {
+  .topbar-pay {
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
+
+  .topbar-pay .payment-toggle {
+    flex: 1;
+  }
+
+  .topbar-pay .payment-option-btn {
+    flex: 1;
+    min-height: 38px;
+  }
+}
+
+/* Keep the top bar tidy on laptop-size screens */
+.topbar-left {
+  flex-shrink: 0;
+}
+
+.topbar-actions .btn,
+.topbar-actions .sensor-indicator {
+  white-space: nowrap;
+}
+
+@media screen and (max-width: 1600px) {
+  .topbar-pay-label {
+    display: none;
+  }
+
+  .scan-input-wrap {
+    width: 200px;
+  }
+}

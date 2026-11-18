@@ -104,6 +104,16 @@
             </div>
             <div class="topbar-actions">
 
+                <div class="topbar-pay">
+                    <span class="topbar-pay-label">Payment</span>
+                    <div class="payment-toggle">
+                        <button type="button" class="payment-option-btn active" id="topbar-pay-later-btn"
+                            onclick="setPaymentOption('later')">Pay Later</button>
+                        <button type="button" class="payment-option-btn" id="topbar-pay-now-btn"
+                            onclick="setPaymentOption('now')">Pay Now</button>
+                    </div>
+                </div>
+
                 <div class="scan-input-wrap" id="scan-wrap">
                     <div class="live-dot"></div>
                     <input class="scan-input" type="text" id="scan-input" placeholder="Scan customer or job order QR..."
@@ -1267,6 +1277,28 @@
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') closeSidebar();
         });
+
+        
+        // Shrinks any big card number until it fits inside its card
+        function fitKpiValues() {
+            document.querySelectorAll('.kpi-value').forEach(function (el) {
+                if (!el.offsetParent) return;
+                el.style.fontSize = '';
+                var size = parseFloat(getComputedStyle(el).fontSize);
+                while (el.scrollWidth > el.clientWidth + 1 && size > 11) {
+                    size -= 1;
+                    el.style.fontSize = size + 'px';
+                }
+            });
+        }
+        window.addEventListener('load', fitKpiValues);
+        window.addEventListener('resize', fitKpiValues);
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitKpiValues);
+        document.querySelectorAll('.kpi-value').forEach(function (el) {
+            new MutationObserver(fitKpiValues).observe(el, { childList: true, characterData: true, subtree: true });
+        });
+        document.querySelector('.nav').addEventListener('click', function () { setTimeout(fitKpiValues, 80); });
+        setInterval(fitKpiValues, 1500);
     </script>
 
     <script src="app.js"></script>

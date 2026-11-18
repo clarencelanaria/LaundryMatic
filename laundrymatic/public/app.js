@@ -582,8 +582,15 @@ let paymentOption = 'later'; // 'now' | 'later' — set by the Payment toggle in
 
 function setPaymentOption(option) {
     paymentOption = option;
-    document.getElementById('pay-now-btn').classList.toggle('active', option === 'now');
-    document.getElementById('pay-later-btn').classList.toggle('active', option === 'later');
+    // Updates BOTH sets of buttons: the top bar ones and the ones inside the modal
+    ['pay-now-btn', 'topbar-pay-now-btn'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('active', option === 'now');
+    });
+    ['pay-later-btn', 'topbar-pay-later-btn'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('active', option === 'later');
+    });
 }
 
 //stores current weight mode: 'live' or 'manual'
@@ -677,7 +684,7 @@ function populateSelectedCustomerChip(customer) {
 // regardless of what future edits get added to this function.
 function openModal(prefillCustomer = null) {
     weightMode = 'live';
-    setPaymentOption('later');weightMode = 'live';
+    weightMode = 'live';
 
     document.getElementById('form-weight-input').value = '';
     document.getElementById('form-weight-input').style.display = 'none';
@@ -816,6 +823,7 @@ async function submitOrder() {
         };
 
         savePendingOrder(currentShopId, pendingOrder);
+                setPaymentOption('later'); // back to the safe default for the next customer
         showToast('cloud-off', `Order saved offline for ${selectedCustomer.firstName}. Receipt will print once synced.`);
         closeModal();
         loadOrders();
@@ -840,6 +848,7 @@ async function submitOrder() {
 
         const savedOrder = await db.ref(`orders/${orderId}`).once('value');
         const orderData = savedOrder.val();
+                setPaymentOption('later'); // back to the safe default for the next customer
 
         showToast('check-circle-2', `Order created for ${selectedCustomer.firstName}.`);
         closeModal();

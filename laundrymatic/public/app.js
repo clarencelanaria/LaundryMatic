@@ -36,18 +36,7 @@ const ORDERS = [
 // Price per kilogram — overwritten by Firebase settings on load
 let RATE = 65;
 
-// Which pricing formula is active — 'flat' (existing system) or
-// 'tiered' (new). Defaults to 'flat' so any install without this
-// field yet keeps working exactly as it does today.
-let PRICING_MODE = 'flat';
 
-// Tiered pricing config — all fully editable from Settings, never
-// hardcoded in the calculation itself
-let TIERED_BASE_PRICE = 150;
-let TIERED_START_KG = 7;
-let TIERED_EXTRA_PER_KG = 25;
-let TIERED_MAX_KG = 15;
-let TIERED_MAX_PRICE = 375;
 
 // IoT sensor weight readings history
 const HISTORY = [
@@ -106,15 +95,6 @@ function formatRelativeTime(isoString) {
 // no more service-type multiplier needed
 let MIN_KG = 3; // overwritten by Firebase settings on load
 
-function cost(w) {
-    if (PRICING_MODE === 'tiered') {
-        return calculateTieredCost(w);
-    }
-    // Anything below the minimum kilo is billed AS the minimum kilo —
-    // e.g. 3kg at ₱25/kg with a 5kg minimum bills as 5 × 25 = ₱125
-    const billableWeight = Math.max(w, MIN_KG);
-    return billableWeight * RATE;
-}
 
 // New tiered pricing — fully driven by Settings, nothing hardcoded here.
 // Base price applies up to TIERED_START_KG; every kg beyond that adds
@@ -637,23 +617,6 @@ async function loadSettingsIntoForm() {
     const rateInput = document.getElementById('rate-input');
     if (rateInput) rateInput.value = RATE.toFixed(2);
 
-    // ── TIERED PRICING (new, additive) ────────────────────────
-    PRICING_MODE = settings.pricingMode === 'tiered' ? 'tiered' : 'flat';
-
-    TIERED_BASE_PRICE   = settings.tieredBasePrice   != null ? settings.tieredBasePrice   : 150;
-    TIERED_START_KG     = settings.tieredStartKg     != null ? settings.tieredStartKg     : 7;
-    TIERED_EXTRA_PER_KG = settings.tieredExtraPerKg  != null ? settings.tieredExtraPerKg  : 25;
-    TIERED_MAX_KG       = settings.tieredMaxKg       != null ? settings.tieredMaxKg       : 15;
-    TIERED_MAX_PRICE    = settings.tieredMaxPrice    != null ? settings.tieredMaxPrice    : 375;
-
-    const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
-    setVal('tiered-base-price-input', TIERED_BASE_PRICE.toFixed(2));
-    setVal('tiered-start-kg-input', TIERED_START_KG);
-    setVal('tiered-extra-per-kg-input', TIERED_EXTRA_PER_KG.toFixed(2));
-    setVal('tiered-max-kg-input', TIERED_MAX_KG);
-    setVal('tiered-max-price-input', TIERED_MAX_PRICE.toFixed(2));
-
-    setPricingMode(PRICING_MODE);
 }
 
 // Connects to Firebase and listens for real Arduino readings
@@ -1067,7 +1030,7 @@ async function viewOrderDetails(orderId) {
     }
 }
 
-// Simulates saving settings
+// Saves the pricing settings
 async function saveSettings() {
     const minInput  = document.getElementById('min-kg-input');
     const rateInput = document.getElementById('rate-input');
@@ -1078,55 +1041,20 @@ async function saveSettings() {
     const newMinKg = (!isNaN(parsedMin)  && parsedMin  >= 0) ? parsedMin  : 3;
     const newRate  = (!isNaN(parsedRate) && parsedRate > 0) ? parsedRate : 65;
 
-    // ── TIERED PRICING (new, additive) ────────────────────────
-    const parsedTieredBasePrice   = parseFloat(document.getElementById('tiered-base-price-input').value);
-    const parsedTieredStartKg     = parseFloat(document.getElementById('tiered-start-kg-input').value);
-    const parsedTieredExtraPerKg  = parseFloat(document.getElementById('tiered-extra-per-kg-input').value);
-    const parsedTieredMaxKg       = parseFloat(document.getElementById('tiered-max-kg-input').value);
-    const parsedTieredMaxPrice    = parseFloat(document.getElementById('tiered-max-price-input').value);
-
-    const newTieredBasePrice   = (!isNaN(parsedTieredBasePrice)   && parsedTieredBasePrice   >= 0) ? parsedTieredBasePrice   : 150;
-    const newTieredStartKg     = (!isNaN(parsedTieredStartKg)     && parsedTieredStartKg     >  0) ? parsedTieredStartKg     : 7;
-    const newTieredExtraPerKg  = (!isNaN(parsedTieredExtraPerKg)  && parsedTieredExtraPerKg  >= 0) ? parsedTieredExtraPerKg  : 25;
-    const newTieredMaxKg       = (!isNaN(parsedTieredMaxKg)       && parsedTieredMaxKg       >  newTieredStartKg) ? parsedTieredMaxKg : 15;
-    const newTieredMaxPrice    = (!isNaN(parsedTieredMaxPrice)    && parsedTieredMaxPrice    >= newTieredBasePrice) ? parsedTieredMaxPrice : 375;
-
     try {
         await saveSettingsToFirebase(currentShopId, {
             minKg: newMinKg,
             ratePerKg: newRate,
-            pricingMode: PRICING_MODE,
-            tieredBasePrice: newTieredBasePrice,
-            tieredStartKg: newTieredStartKg,
-            tieredExtraPerKg: newTieredExtraPerKg,
-            tieredMaxKg: newTieredMaxKg,
-            tieredMaxPrice: newTieredMaxPrice,
         });
 
         MIN_KG = newMinKg;
         RATE = newRate;
-        TIERED_BASE_PRICE = newTieredBasePrice;
-        TIERED_START_KG = newTieredStartKg;
-        TIERED_EXTRA_PER_KG = newTieredExtraPerKg;
-        TIERED_MAX_KG = newTieredMaxKg;
-        TIERED_MAX_PRICE = newTieredMaxPrice;
 
         showToast('save', 'Settings saved successfully.');
     } catch (err) {
         showToast('alert-triangle', 'Error saving settings.');
         console.error(err);
     }
-}
-
-// Switches which pricing mode is active. Just updates the toggle
-// UI and PRICING_MODE in memory — actual persistence still happens
-// when "Save Settings" is clicked, same as every other setting here.
-function setPricingMode(mode) {
-    PRICING_MODE = mode;
-    document.getElementById('pricing-mode-flat-btn').classList.toggle('active', mode === 'flat');
-    document.getElementById('pricing-mode-tiered-btn').classList.toggle('active', mode === 'tiered');
-    document.getElementById('pricing-flat-active-badge').style.display = mode === 'flat' ? 'inline-flex' : 'none';
-    document.getElementById('pricing-tiered-active-badge').style.display = mode === 'tiered' ? 'inline-flex' : 'none';
 }
 
 

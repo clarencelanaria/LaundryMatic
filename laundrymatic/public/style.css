@@ -2808,3 +2808,426 @@ select.form-input option {
     grid-template-columns: 1fr;
   }
 }
+
+/* =====================================================================
+   SIDEBAR REDESIGN + RESPONSIVE LAYOUT
+   Everything below only ADDS to or overrides the rules above.
+   To undo it, delete from this comment to the end of the file.
+   ===================================================================== */
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+.main {
+  min-width: 0;
+}
+
+/* ── Sidebar: new logo block ─────────────────────────────── */
+
+.sidebar {
+  background: linear-gradient(180deg, #ffffff 0%, #f3fbfe 100%);
+  box-shadow: 4px 0 24px rgba(23, 50, 68, 0.04);
+}
+
+.logo {
+  padding: 0 4px 20px;
+}
+
+.logo-mark {
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+/* The logo file has transparent space around the icon, so it is
+   drawn larger and pulled in with negative margins */
+.logo-mark img {
+  width: 128px;
+  max-width: 100%;
+  margin: -16px auto -10px;
+  filter: drop-shadow(0 8px 14px rgba(18, 184, 200, 0.28));
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-name {
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: 1.4rem;
+  letter-spacing: -0.3px;
+  line-height: 1.1;
+  color: #0e2f5a;
+  white-space: nowrap;
+}
+
+.logo-name span {
+  color: var(--accent);
+}
+
+.logo-tag {
+  display: inline-block;
+  margin-top: 0;
+  padding: 3px 10px;
+  font-size: 0.56rem;
+  letter-spacing: 1.2px;
+  color: var(--accent);
+  background: rgba(18, 184, 200, 0.08);
+  border: 1px solid rgba(18, 184, 200, 0.25);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* Menu keeps working on short screens instead of pushing the
+   admin badge off the bottom */
+.nav {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* The page you are on is now highlighted */
+.nav-item {
+  position: relative;
+}
+
+.nav-item.active {
+  color: #0b7f8c;
+  font-weight: 600;
+  background: linear-gradient(90deg, rgba(18, 184, 200, 0.16), rgba(18, 184, 200, 0.05));
+  border-color: rgba(18, 184, 200, 0.25);
+}
+
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 9px;
+  bottom: 9px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+/* ── Hamburger button + menu backdrop (hidden on desktop) ─── */
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.menu-btn {
+  display: none;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.menu-btn:hover {
+  border-color: var(--accent);
+}
+
+.sidebar-overlay {
+  display: none;
+}
+
+/* ── Laptops / small desktops ────────────────────────────── */
+
+@media screen and (max-width: 1200px) {
+  .topbar {
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    padding: 14px 24px;
+  }
+
+  .topbar-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px 10px;
+  }
+
+  .content {
+    padding: 24px;
+  }
+}
+
+/* ── Tablets: cards stack into fewer columns ─────────────── */
+
+@media screen and (max-width: 1000px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .overview-section,
+  .records-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Tablets portrait + phones: sidebar becomes a slide-in menu ── */
+
+@media screen and (max-width: 900px) {
+  .menu-btn {
+    display: inline-flex;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    height: 100vh;
+    height: 100dvh;
+    width: 272px;
+    min-width: 272px;
+    max-width: 85vw;
+    z-index: 300;
+    overflow-y: auto;
+    box-shadow: none;
+    transform: translateX(-102%);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 8px 0 40px rgba(23, 50, 68, 0.28);
+  }
+
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 250;
+    background: rgba(23, 50, 68, 0.38);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+
+  .sidebar-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .main {
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  .topbar {
+    padding: 10px 16px;
+  }
+
+  .page-title {
+    font-size: 1.1rem;
+  }
+
+  .content {
+    padding: 16px;
+  }
+
+  .card-head {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .activity-card,
+  .status-overview-card {
+    padding: 18px 16px;
+  }
+
+  .unclaimed-ribbon {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 14px;
+  }
+
+  /* Tables scroll sideways instead of squashing or overflowing */
+  .table-card {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-card table {
+    min-width: 680px;
+  }
+
+  .table-head {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+
+  /* Easier to tap, and 16px inputs stop phones zooming in on focus */
+  .btn {
+    min-height: 40px;
+  }
+
+  .nav-item {
+    padding: 12px 14px;
+  }
+
+  .tab-pill {
+    padding: 8px 14px;
+  }
+
+  .modal-close {
+    width: 36px;
+    height: 36px;
+  }
+
+  .form-input,
+  .scan-input,
+  .table-search input {
+    font-size: 16px;
+  }
+
+  .toast {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+  }
+
+  /* Super Admin page table */
+  .sa-table {
+    min-width: 640px;
+  }
+
+  .sa-wrapper {
+    overflow-x: auto;
+  }
+
+  .sa-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+}
+
+/* ── Phones ──────────────────────────────────────────────── */
+
+@media screen and (max-width: 700px) {
+  .topbar-left {
+    flex: 1 1 auto;
+  }
+
+  .topbar-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .scan-input-wrap {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .topbar-actions .btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .table-search {
+    width: 100%;
+  }
+
+  /* Pop-ups fit the screen and scroll inside themselves */
+  .modal {
+    padding: 20px 18px;
+    max-height: 92vh;
+    max-height: 92dvh;
+    overflow-y: auto;
+  }
+
+  .form-row,
+  .scan-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-footer {
+    flex-wrap: wrap;
+  }
+
+  .modal-footer .btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  /* Charts: keep bars readable; scroll sideways if there are many */
+  .chart-area {
+    height: 190px;
+    padding: 30px 4px 0;
+    gap: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .bar-wrap {
+    flex: 1 0 28px;
+    min-width: 28px;
+  }
+}
+
+@media screen and (max-width: 560px) {
+  .kpi-grid,
+  .profile-summary-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Login / register / verify pages ─────────────────────── */
+
+@media screen and (max-width: 760px) {
+  .auth-body {
+    padding: 12px;
+    align-items: flex-start;
+  }
+
+  .auth-wrapper {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .auth-brand {
+    padding: 24px 20px;
+    align-items: center;
+    text-align: center;
+  }
+
+  .auth-brand-logo {
+    margin-bottom: 8px;
+  }
+
+  .auth-brand-logo img {
+    width: 110px;
+    height: 110px;
+  }
+
+  .auth-brand-tag {
+    margin-bottom: 0;
+  }
+
+  .auth-brand-desc,
+  .auth-brand-dots {
+    display: none;
+  }
+
+  .auth-card {
+    padding: 28px 20px;
+  }
+}

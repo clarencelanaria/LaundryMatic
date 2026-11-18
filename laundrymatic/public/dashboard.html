@@ -14,14 +14,16 @@
 
 <body>
 
+        <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
     <aside class="sidebar">
 
         <div class="logo">
             <div class="logo-mark">
-                <img src="assets/laundrymatic-logo.png">
-                <div>
-                    LaundryMatic
-                    <span class="logo-tag">IoT System</span>
+                <img src="assets/laundrymatic-logo.png" alt="LaundryMatic">
+                <div class="logo-text">
+                    <span class="logo-name">Laundry<span>Matic</span></span>
+                    <span class="logo-tag">IoT Smart Weighing System</span>
                 </div>
             </div>
         </div>
@@ -94,7 +96,12 @@
     <main class="main">
 
         <div class="topbar">
-            <div class="page-title" id="page-title">Overview</div>
+            <div class="topbar-left">
+                <button class="menu-btn" onclick="toggleSidebar()" aria-label="Open menu">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+                </button>
+                <div class="page-title" id="page-title">Overview</div>
+            </div>
             <div class="topbar-actions">
 
                 <div class="scan-input-wrap" id="scan-wrap">
@@ -416,110 +423,30 @@
         <!-- ── SETTINGS PAGE ──────────────────────────── -->
         <div class="content page" id="page-settings">
 
-            <div class="settings-wrap">
-
-                <!-- Active Pricing Mode toggle -->
-                <div class="table-card" style="margin-bottom:20px">
+            
+            <div class="settings-wrap" style="max-width:560px">
+                <div class="table-card pricing-column-card">
                     <div class="table-head">
-                        <div class="card-title">Pricing Mode</div>
+                        <div>
+                            <div class="card-title">Pricing (Flat Rate)</div>
+                            <div class="card-subtitle">A rate per kilogram with a minimum charge.</div>
+                        </div>
                     </div>
                     <div style="padding:20px 22px">
-                        <div class="card-subtitle" style="margin-bottom:12px">
-                            Choose which pricing system is used to calculate new job order costs. Both configurations
-                            below stay saved and editable no matter which one is active.
+                        <div class="form-group">
+                            <label class="form-label">Rate per Kilogram (₱)</label>
+                            <input class="form-input" type="number" step="0.01" id="rate-input" value="65.00">
+                            <div class="field-hint">Amount charged for every kilogram of laundry.</div>
                         </div>
-                        <div class="payment-toggle">
-                            <button type="button" class="payment-option-btn active" id="pricing-mode-flat-btn"
-                                onclick="setPricingMode('flat')">Previous Pricing</button>
-                            <button type="button" class="payment-option-btn" id="pricing-mode-tiered-btn"
-                                onclick="setPricingMode('tiered')">New Tiered Pricing</button>
+                        <div class="form-group">
+                            <label class="form-label">Minimum Kilo per Transaction (kg)</label>
+                            <input class="form-input" type="number" step="0.1" id="min-kg-input" value="3">
+                            <div class="field-hint">Loads lighter than this are billed as this weight. Example: 3 kg at ₱25/kg with a 5 kg minimum is charged as 5 × ₱25 = ₱125.</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Both pricing configurations side by side — no scrolling
-         needed to compare or edit either one -->
-                <div class="pricing-columns">
-
-                    <!-- Previous Pricing (Flat Rate) -->
-                    <div class="table-card pricing-column-card">
-                        <div class="table-head">
-                            <div>
-                                <div class="card-title" style="display:flex;align-items:center;gap:8px">
-                                    Previous Pricing (Flat Rate)
-                                    <span class="nav-badge" id="pricing-flat-active-badge"
-                                        style="background:var(--accent);display:inline-flex">ACTIVE</span>
-                                </div>
-                                <div class="card-subtitle">The original system — a rate per kilogram with a minimum
-                                    charge.</div>
-                            </div>
-                        </div>
-                        <div style="padding:20px 22px">
-                            <div class="form-group">
-                                <label class="form-label">Rate per Kilogram (₱)</label>
-                                <input class="form-input" type="number" step="0.01" id="rate-input" value="65.00">
-                                <div class="field-hint">Amount charged for every kilogram of laundry.</div>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Minimum Kilo per Transaction (kg)</label>
-                                <input class="form-input" type="number" step="0.1" id="min-kg-input" value="3">
-                                <div class="field-hint">Loads lighter than this are billed as this weight. Example: 3 kg
-                                    at ₱25/kg with a 5 kg minimum is charged as 5 × ₱25 = ₱125.</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- New Tiered Pricing -->
-                    <div class="table-card pricing-column-card">
-                        <div class="table-head">
-                            <div>
-                                <div class="card-title" style="display:flex;align-items:center;gap:8px">
-                                    New Tiered Pricing
-                                    <span class="nav-badge" id="pricing-tiered-active-badge"
-                                        style="background:var(--accent);display:none">ACTIVE</span>
-                                </div>
-                                <div class="card-subtitle">A flat base price up to a starting weight, then a
-                                    per-kilogram charge, capped at a maximum price.</div>
-                            </div>
-                        </div>
-                        <div style="padding:20px 22px">
-                            <div class="form-group">
-                                <label class="form-label">Minimum / Base Price (₱)</label>
-                                <input class="form-input" type="number" step="0.01" id="tiered-base-price-input"
-                                    value="150.00">
-                                <div class="field-hint">Flat price charged up to the Starting Kilogram.</div>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Starting Kilogram (kg)</label>
-                                <input class="form-input" type="number" step="0.1" id="tiered-start-kg-input" value="7">
-                                <div class="field-hint">Extra charges begin after this weight.</div>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Extra Price per Kilogram (₱)</label>
-                                <input class="form-input" type="number" step="0.01" id="tiered-extra-per-kg-input"
-                                    value="25.00">
-                                <div class="field-hint">Amount added for every kilogram above the Starting Kilogram.
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Maximum Kilogram (kg)</label>
-                                <input class="form-input" type="number" step="0.1" id="tiered-max-kg-input" value="15">
-                                <div class="field-hint">Highest weight used for the normal tiered calculation.</div>
-                            </div>
-                            <div class="form-group" style="margin-bottom:0">
-                                <label class="form-label">Maximum Price (₱)</label>
-                                <input class="form-input" type="number" step="0.01" id="tiered-max-price-input"
-                                    value="375.00">
-                                <div class="field-hint">Highest amount the customer can ever be charged — used for any
-                                    weight above the Maximum Kilogram.</div>
-                            </div>
-                        </div>
-                    </div>
-
-                </div><!-- /pricing-columns -->
-
                 <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
-
             </div>
 
         </div><!-- /page-settings -->
@@ -1320,6 +1247,26 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script>
         lucide.createIcons();
+    </script>
+
+        <script>
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('open');
+            document.getElementById('sidebar-overlay').classList.toggle('open');
+        }
+        function closeSidebar() {
+            document.querySelector('.sidebar').classList.remove('open');
+            document.getElementById('sidebar-overlay').classList.remove('open');
+        }
+        document.querySelector('.nav').addEventListener('click', function (e) {
+            if (e.target.closest('.nav-item')) closeSidebar();
+        });
+        window.addEventListener('resize', function () {
+            if (window.innerWidth > 900) closeSidebar();
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeSidebar();
+        });
     </script>
 
     <script src="app.js"></script>

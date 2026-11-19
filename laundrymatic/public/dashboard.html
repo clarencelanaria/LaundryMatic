@@ -8,7 +8,7 @@
     <title>LaundryMatic</title>
     <link rel="stylesheet" href="style.css">
     <link
-        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap"
         rel="stylesheet">
 </head>
 
@@ -261,6 +261,7 @@
                             <th>Cost</th>
                             <th>Status</th>
                             <th>Date/Time</th>
+                            <th>Receipt</th>
                         </tr>
                     </thead>
                     <tbody id="orders-body"></tbody>
@@ -298,6 +299,7 @@
                             <th>Cost</th>
                             <th>Status</th>
                             <th>Date/Time</th>
+                            <th>Receipt</th>
                         </tr>
                     </thead>
                     <!-- FIX: was "orders-full-body", must be "orders-body-full" -->
@@ -835,6 +837,34 @@
 
         </div>
     </div><!-- /receipt-modal -->
+
+    <!-- JOB ORDER QR + RE-PRINT MODAL — opened by the "Reprint" button on a job order row -->
+    <div class="modal-overlay" id="reprint-modal">
+        <div class="modal reprint-modal-box">
+
+            <div class="modal-title">
+                Job Order QR
+                <button class="modal-close" onclick="closeReprintModal()">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+
+            <div class="reprint-qr-frame" id="reprint-qr"></div>
+
+            <div class="reprint-code" id="reprint-code">—</div>
+            <div class="reprint-customer" id="reprint-customer">—</div>
+            <div class="reprint-meta" id="reprint-meta"></div>
+
+            <div class="reprint-actions">
+                <button class="btn btn-primary" onclick="reprintReceipt()">
+                    <i data-lucide="printer"></i> Re-print Receipt
+                </button>
+                <button class="btn btn-ghost" onclick="closeReprintModal()">Close</button>
+            </div>
+            <div class="reprint-hint">Use this if the receipt didn't print properly the first time.</div>
+
+        </div>
+    </div><!-- /reprint-modal -->
 
     <!-- ORDER SCAN MODAL — shown when admin scans an Order QR -->
     <div class="modal-overlay" id="order-scan-modal">

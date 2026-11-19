@@ -170,6 +170,13 @@ function renderOrders(target, data) {
       <td><span class="cost-cell">₱${cost(o.weight).toFixed(2)}</span></td>
       <td>${statusBadge(o.status)}</td>
       <td><span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--muted2)">${o.date || '—'} ${o.time || ''}</span></td>
+      <td>
+        <button class="btn btn-ghost btn-reprint"
+                onclick="event.stopPropagation(); openReprintModal('${o.orderId}')"
+                title="Show the job order QR and re-print the receipt">
+          ${icon('printer', 14)} Reprint
+        </button>
+      </td>
     </tr>
   `).join('');
 
@@ -2106,6 +2113,96 @@ function printReceipt() {
   }, 300);
 }
 
+// ── RE-PRINT — job order QR + receipt ────────────────────────
+// Opened by the "Reprint" button on any job order row. Shows that
+// order's QR, with a button underneath to print the receipt again
+// in case the first print failed.
+let reprintData = null;
+
+async function openReprintModal(orderId) {
+    if (!orderId) return;
+
+    if (String(orderId).startsWith('local-')) {
+        showToast('cloud-off', "This order hasn't synced yet, so it has no QR to show.");
+        return;
+    }
+
+    if (typeof systemOnline !== 'undefined' && !systemOnline) {
+        showToast('cloud-off', "You're offline. Reconnect to re-print this order.");
+        return;
+    }
+
+    try {
+        const snap  = await db.ref(`orders/${orderId}`).once('value');
+        const order = snap.val();
+
+        if (!order) {
+            showToast('alert-triangle', 'Job order not found.');
+            return;
+        }
+
+        // Contact numbers are stored on the customer, not on the order
+        let customer = { contact1: '—', contact2: '' };
+        try {
+            const c = order.userId ? await getCustomer(order.userId) : null;
+            if (c) customer = { contact1: c.contact1 || '—', contact2: c.contact2 || '' };
+        } catch (e) {
+            console.warn('Could not load customer contact for reprint:', e);
+        }
+
+        reprintData = { order, customer };
+
+        document.getElementById('reprint-code').textContent = order.transactionCode || '—';
+        document.getElementById('reprint-customer').textContent = order.customerName || '—';
+        document.getElementById('reprint-meta').textContent =
+            (order.kg || 0).toFixed(2) + ' kg  ·  ₱' + (order.amount || 0).toFixed(2) +
+            '  ·  ' + (STATUS_LABELS[order.status] || order.status || '');
+
+        const qrBox = document.getElementById('reprint-qr');
+        qrBox.innerHTML = '';
+        new QRCode(qrBox, {
+            text: order.orderId || orderId, width: 200, height: 200,
+            colorDark: '#000000', colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.H,
+        });
+
+        document.getElementById('reprint-modal').classList.add('open');
+        renderIcons();
+
+    } catch (err) {
+        showToast('alert-triangle', 'Error loading job order.');
+        console.error(err);
+    }
+}
+
+function closeReprintModal() {
+    document.getElementById('reprint-modal').classList.remove('open');
+    reprintData = null;
+}
+
+// Prints the receipt again — the pop-up stays open so it can be
+// tried a third time if the printer fails again
+function reprintReceipt() {
+    if (!reprintData) return;
+    const { order, customer } = reprintData;
+
+    clearPrintAreas();
+    populateReceiptFields(order, customer);
+
+    // Show the rate this order was actually billed at, not today's rate
+    const billable = Math.max(order.kg || 0, MIN_KG);
+    if (order.amount && billable > 0) {
+        document.getElementById('r-rate').textContent =
+            '₱' + (order.amount / billable).toFixed(2) + ' / kg';
+    }
+
+    const receiptCard = document.getElementById('receipt-card');
+    const printArea   = document.getElementById('print-receipt-area');
+    printArea.innerHTML = receiptCard.outerHTML;
+
+    // Small delay so the QR finishes rendering before the print dialog opens
+    setTimeout(() => window.print(), 300);
+}
 
 // ── CREATE ORDER FROM PROFILE SCAN MODAL ─────────────────────
 // Called by the "+ New Order for this Customer" button

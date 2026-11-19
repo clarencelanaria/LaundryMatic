@@ -3387,3 +3387,144 @@ html {
     gap: 8px 10px;
   }
 }
+
+/* =====================================================================
+   Re-print button + Job Order QR pop-up
+   (paste at the very bottom of style.css)
+   ===================================================================== */
+
+.btn-reprint {
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.reprint-modal-box {
+  width: 400px;
+  max-width: 94vw;
+  text-align: center;
+}
+
+.reprint-qr-frame {
+  width: fit-content;
+  margin: 4px auto 14px;
+  padding: 14px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(23, 50, 68, 0.08);
+}
+
+.reprint-qr-frame img,
+.reprint-qr-frame canvas {
+  display: block;
+}
+
+.reprint-code {
+  font-family: var(--font-head);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: 0.5px;
+}
+
+.reprint-customer {
+  margin-top: 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.reprint-meta {
+  margin: 4px 0 18px;
+  font-size: 0.85rem;
+  color: var(--muted2);
+}
+
+.reprint-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reprint-actions .btn {
+  width: 100%;
+  justify-content: center;
+  min-height: 44px;
+  font-size: 0.95rem;
+}
+
+.reprint-hint {
+  margin-top: 12px;
+  font-size: 0.76rem;
+  color: var(--muted2);
+}
+
+/* =====================================================================
+   Clearer, easier-to-read text (panel recommendation)
+   Fonts themselves are switched in the <link> tag of each page and the
+   three --font variables below. Everything here only affects the screen,
+   never the printed receipt.
+   ===================================================================== */
+
+:root {
+  --font-head: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'Inter', system-ui, sans-serif;
+  --muted: #5a7080; /* darker so dimmed labels are easier to read */
+}
+
+@media screen {
+  body {
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Small labels were 0.56-0.68rem — raised so they are comfortable to read */
+  .nav-label,
+  .sensor-item-label,
+  thead th,
+  .scan-detail-label,
+  .receipt-section-title,
+  .receipt-qr-sub,
+  .topbar-pay-label,
+  .bar-tooltip {
+    font-size: 0.74rem;
+  }
+
+  .nav-badge,
+  .notif-time,
+  .admin-role,
+  .profile-summary-label,
+  .status-count-label,
+  .status-badge,
+  .record-time,
+  .gauge-label,
+  .reading-time,
+  .pu-order-time,
+  .auth-brand-tag,
+  .key-hint {
+    font-size: 0.76rem;
+  }
+
+  .logo-tag {
+    font-size: 0.62rem;
+    letter-spacing: 0.6px;
+  }
+
+  .bar-label {
+    font-size: 0.66rem;
+  }
+
+  thead th {
+    font-weight: 600;
+  }
+}
+
+/* One extra column (Reprint) in the order tables */
+@media screen and (max-width: 900px) {
+  .table-card table {
+    min-width: 780px;
+  }
+}

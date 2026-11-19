@@ -3528,3 +3528,104 @@ html {
     min-width: 780px;
   }
 }
+
+/* =====================================================================
+   Bolder text + richer colors (panel recommendation)
+   (paste at the very bottom of style.css)
+   ===================================================================== */
+
+:root {
+  --text:    #0b2233;  /* main text: near-black navy */
+  --muted:   #3f586a;  /* small labels: much darker than before */
+  --muted2:  #2f4657;  /* secondary text */
+  --border:  #b4d3e0;  /* clearer card and input borders */
+  --accent:  #0891a3;  /* teal: deeper so it reads clearly on white */
+  --accent2: #1d6fd1;  /* blue */
+  --accent3: #d46f00;  /* orange */
+  --danger:  #d42a48;  /* red */
+}
+
+@media screen {
+  /* Cards stand out a little more from the page */
+  .kpi,
+  .table-card,
+  .activity-card,
+  .status-overview-card {
+    box-shadow: 0 2px 12px rgba(23, 50, 68, 0.08);
+  }
+
+  /* Labels and table headings: bold */
+  .admin-role,
+  .form-label,
+  .gauge-label,
+  .kpi-label,
+  .nav-label,
+  .notif-time,
+  .reading-time,
+  .record-time,
+  .sensor-item-label,
+  thead th {
+    font-weight: 700;
+  }
+
+  /* Dimmed text: semi-bold */
+  .bar-label {
+    font-weight: 600;
+  }
+
+  /* Secondary text: medium weight */
+  .action-btn,
+  .auth-brand-desc,
+  .auth-card-subtitle,
+  .auth-footer-text,
+  .card-subtitle,
+  .checkbox-label,
+  .cost-preview,
+  .dropdown-contact,
+  .dropdown-empty,
+  .field-hint,
+  .gauge-unit,
+  .input-icon-btn,
+  .kpi-sub,
+  .logout-btn,
+  .modal-close,
+  .reading-customer,
+  .record-meta,
+  .search-clear-btn,
+  .selected-contact,
+  .sensor-indicator,
+  .status-picked,
+  .weight-live-dot,
+  .weight-live-unit,
+  .weight-mode-check,
+  .weight-status,
+  .weight-unit {
+    font-weight: 500;
+  }
+
+  /* Small text written directly into the page by app.js */
+  [style*="var(--muted2)"],
+  [style*="var(--muted)"] {
+    font-weight: 500;
+  }
+
+  .nav-item {
+    font-weight: 500;
+  }
+
+  .nav-item.active {
+    font-weight: 700;
+  }
+
+  .btn,
+  .status-badge {
+    font-weight: 600;
+  }
+
+  .form-input,
+  .scan-input,
+  .table-search input {
+    font-weight: 500;
+    color: var(--text);
+  }
+}

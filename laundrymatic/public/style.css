@@ -3629,3 +3629,23 @@ html {
     color: var(--text);
   }
 }
+
+/* =====================================================================
+   QR code inside the Scanned Job Order pop-up
+   (paste at the very bottom of style.css)
+   ===================================================================== */
+
+.scan-qr-frame {
+  width: fit-content;
+  margin: 0 auto 14px;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(23, 50, 68, 0.08);
+}
+
+.scan-qr-frame img,
+.scan-qr-frame canvas {
+  display: block;
+}

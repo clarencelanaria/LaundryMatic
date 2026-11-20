@@ -1205,6 +1205,15 @@ function openOrderScanModal(orderId, order) {
   document.getElementById('scan-date-in').textContent =
     order.dateIn || '—';
 
+      // Job order QR
+  const scanQr = document.getElementById('scan-order-qr');
+  scanQr.innerHTML = '';
+  new QRCode(scanQr, {
+    text: order.orderId || orderId, width: 130, height: 130,
+    colorDark: '#000000', colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.H,
+  });
+
   // ETA row — hide if already picked up
   const etaRow = document.getElementById('scan-eta-row');
   if (order.estimatedFinishTime && status !== 'picked') {
